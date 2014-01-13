@@ -11,3 +11,15 @@ project/plugins/project/
 
 # Scala-IDE specific
 .scala_dependencies
+
+# Intellij specific
+*.iml
+*.idea/
+*.idea_modules/
+
+# Sublime specific
+*.sublime-project
+*.sublime-workspace
+
+# OS specific
+.DS_Store
