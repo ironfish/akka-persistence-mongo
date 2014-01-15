@@ -33,9 +33,10 @@ class CasbahJournal extends SyncWriteJournal with CasbahReplay with CasbahHelper
    * are written or none.
    */
   def write(persistentBatch: immutable.Seq[PersistentRepr]): Unit = {
-    persistentBatch.foreach { p ⇒
-      collection.insert(writeJSON(p.processorId, p.sequenceNr, msgToBytes(p)), WriteConcern.Safe)
-    }
+    implicit val wcs = WriteConcern.Safe
+
+    val batch = persistentBatch.map(pr => writeJSON(pr.processorId, pr.sequenceNr, msgToBytes(pr)))
+    collection.insert(batch:_*)
   }
 
   /**
