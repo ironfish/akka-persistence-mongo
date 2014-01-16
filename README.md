@@ -47,6 +47,5 @@ Status
 
 - All operations required by the Akka Persistence [journal plugin API](http://doc.akka.io/docs/akka/2.3-M2/scala/persistence.html#journal-plugin-api) are supported.
 - Message writes are batched to optimize throughput. When using channels, confirmation writes are not batched yet.
-- Persistent channel recovery is not optimized yet. For details and possible optimizations details see [issue 4](https://github.com/krasserm/akka-persistence-cassandra/issues/4).
 - Sharding is not yet supported.
 - This should be considered **experimental** as Akka-Persistence is still changing and the underlying storage structure may change.
