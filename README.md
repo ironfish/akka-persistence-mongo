@@ -12,8 +12,8 @@ Prerequisites
     <td>2.3-M2 or higher</td>
   </tr>
   <tr>
-    <td>Cassandra version: </td>
-    <td>2.0.3 or higher</td>
+    <td>Mongo version: </td>
+    <td>2.4.8 or higher</td>
   </tr>
 </table>
 
