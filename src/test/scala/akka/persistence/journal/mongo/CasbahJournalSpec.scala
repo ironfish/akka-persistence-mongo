@@ -20,6 +20,7 @@ object CasbahJournalSpec {
       |akka.persistence.journal.plugin = "casbah-journal"
       |akka.persistence.snapshot-store.local.dir = "target/snapshots"
       |akka.persistence.publish-plugin-commands = on
+      |akka.persistence.publish-confirmations = on
       |casbah-journal.mongo-url = "mongodb://localhost:27017/store.messages"
     """.stripMargin)
 
@@ -41,7 +42,16 @@ object CasbahJournalSpec {
     val channel = context.actorOf(Channel.props("channel"))
 
     def receive = {
-      case p: Persistent => channel forward Deliver(p, destination)
+      case p: Persistent =>
+        channel forward Deliver(p, destination.path)
+    }
+  }
+
+  class Destination extends Actor {
+    def receive = {
+      case cp @ ConfirmablePersistent(payload, sequenceNr, _) =>
+        sender ! s"$payload-$sequenceNr"
+        cp.confirm()
     }
   }
 
@@ -67,14 +77,6 @@ object CasbahJournalSpec {
   class ProcessorCNoRecover(override val processorId: String, probe: ActorRef) extends ProcessorC(processorId, probe) {
     override def preStart() = ()
   }
-
-  class Destination extends Actor {
-    def receive = {
-      case cp @ ConfirmablePersistent(payload, sequenceNr, _) =>
-        sender ! s"$payload-$sequenceNr"
-        cp.confirm()
-    }
-  }
 }
 
 import CasbahJournalSpec._
@@ -98,7 +100,6 @@ class CasbahJournalSpec extends TestKit(ActorSystem("test", config)) with Implic
 
       processor2 ! Persistent("b")
       expectMsgAllOf("b", 17L, false)
-//      Thread.sleep(1000)
     }
 
     "write delivery confirmations" in {
@@ -197,14 +198,14 @@ class CasbahJournalSpec extends TestKit(ActorSystem("test", config)) with Implic
   }
 
   def subscribeToConfirmation(probe: TestProbe): Unit =
-    system.eventStream.subscribe(probe.ref, classOf[JournalProtocol.Confirm])
+    system.eventStream.subscribe(probe.ref, classOf[DeliveredByChannel])
 
   def awaitConfirmation(probe: TestProbe): Unit =
-    probe.expectMsgType[JournalProtocol.Confirm]
+    probe.expectMsgType[DeliveredByChannel](max = 3.seconds)
 
   def subscribeToDeletion(probe: TestProbe): Unit =
-    system.eventStream.subscribe(probe.ref, classOf[JournalProtocol.Delete])
+    system.eventStream.subscribe(probe.ref, classOf[JournalProtocol.DeleteMessages])
 
   def awaitDeletion(probe: TestProbe): Unit =
-    probe.expectMsgType[JournalProtocol.Delete]
+    probe.expectMsgType[JournalProtocol.DeleteMessages](max = 3.seconds)
 }

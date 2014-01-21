@@ -19,7 +19,22 @@ trait CasbahHelper {
   def markerConfirmParsePrefix(cId: String) = cId.substring(0,1)
   def markerConfirmParseSuffix(cId: String) = cId.substring(2)
   val MarkerDelete = "D"
-  
+
+  val idx1 = MongoDBObject(
+    "processorId"         -> 1,
+    "sequenceNr"          -> 1,
+    "marker"              -> 1)
+
+  val idx1Options =
+    MongoDBObject("unique" -> true)
+
+  val idx2 = MongoDBObject(
+    "processorId"         -> 1,
+    "sequenceNr"          -> 1)
+
+  val idx3 =
+    MongoDBObject("sequenceNr" -> 1)
+
   def writeJSON(pId: String, sNr: Long, msg: Array[Byte]) = {
     val builder = MongoDBObject.newBuilder
     builder += ProcessorIdKey -> pId
@@ -47,8 +62,16 @@ trait CasbahHelper {
     builder.result()
   }
 
-  def deleteQueryStatement(processorId: String, sequenceNr: Long): MongoDBObject =
+  def delMatchStatement(processorId: String, sequenceNr: Long): MongoDBObject =
     MongoDBObject(ProcessorIdKey -> processorId, SequenceNrKey -> sequenceNr)
+
+  def delLteStatement(processorId: String, toSequenceNr: Long): MongoDBObject =
+    MongoDBObject(
+      ProcessorIdKey -> processorId,
+      SequenceNrKey  -> MongoDBObject("$lte" -> toSequenceNr))
+
+  def delOrStatement(elements: List[MongoDBObject]): MongoDBObject =
+    MongoDBObject("$or" -> elements)
 
   def matchStatement(processorId: String, fromSequenceNr: Long, toSequenceNr: Long): MongoDBObject =
     MongoDBObject("$match" ->
@@ -62,8 +85,15 @@ trait CasbahHelper {
         AggIdKey     -> MongoDBObject(ProcessorIdKey -> "$processorId", SequenceNrKey -> "$sequenceNr"),
         AddDetailsKey -> MongoDBObject("$addToSet" -> MongoDBObject(MarkerKey -> "$marker", MessageKey -> "$message"))))
 
-  def sortStatement: MongoDBObject = MongoDBObject("$sort" -> MongoDBObject(AggIdKey -> 1))
+  def sortStatement: MongoDBObject =
+    MongoDBObject("$sort" -> MongoDBObject(AggIdKey -> 1))
 
-  def maxSnrQueryStatement(processorId: String): MongoDBObject = MongoDBObject(ProcessorIdKey -> processorId)
-  def maxSnrSortStatement: MongoDBObject = MongoDBObject(SequenceNrKey -> -1)
+  def snrQueryStatement(processorId: String): MongoDBObject =
+    MongoDBObject(ProcessorIdKey -> processorId)
+
+  def maxSnrSortStatement: MongoDBObject =
+    MongoDBObject(SequenceNrKey -> -1)
+
+  def minSnrSortStatement: MongoDBObject =
+    MongoDBObject(SequenceNrKey -> 1)
 }

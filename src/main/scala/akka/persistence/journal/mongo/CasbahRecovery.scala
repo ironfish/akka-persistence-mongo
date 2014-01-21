@@ -4,25 +4,24 @@
 package akka.persistence.journal.mongo
 
 import akka.persistence._
-import akka.persistence.journal.AsyncReplay
+import akka.persistence.journal.AsyncRecovery
 
 import com.mongodb.casbah.Imports._
 
 import scala.collection.immutable
 import scala.concurrent._
 
-trait CasbahReplay extends AsyncReplay { this: CasbahJournal ⇒
+trait CasbahRecovery extends AsyncRecovery { this: CasbahJournal ⇒
 
   implicit lazy val replayDispatcher = context.system.dispatchers.lookup(config.getString("replay-dispatcher"))
 
-  def replayAsync(processorId: String, fromSequenceNr: Long, toSequenceNr: Long)(replayCallback: PersistentRepr ⇒
-    Unit): Future[Long] = Future {
-
+  def asyncReplayMessages(processorId: String, fromSequenceNr: Long, toSequenceNr: Long, max: Long)
+                         (replayCallback: PersistentRepr ⇒ Unit): Future[Unit] = Future {
     replay(processorId, fromSequenceNr, toSequenceNr)(replayCallback)
   }
 
   private def replay(processorId: String, fromSequenceNr: Long, toSequenceNr: Long)(replayCallback: PersistentRepr =>
-    Unit): Long = {
+    Unit): Unit = {
 
     import com.mongodb.casbah.Implicits._
 
@@ -56,11 +55,10 @@ trait CasbahReplay extends AsyncReplay { this: CasbahJournal ⇒
       }
     }
     go(dcsItr)
-    maxSnr(processorId)
   }
 
-  private def maxSnr(processorId: String): Long = {
-    val cursor = collection.find(maxSnrQueryStatement(processorId)).sort(maxSnrSortStatement).limit(1)
+  override def asyncReadHighestSequenceNr(processorId: String, fromSequenceNr: Long): scala.concurrent.Future[Long] = future {
+    val cursor = collection.find(snrQueryStatement(processorId)).sort(maxSnrSortStatement).limit(1)
     if (cursor.hasNext) cursor.next().getAs[Long](SequenceNrKey).get else 0L
   }
 }
