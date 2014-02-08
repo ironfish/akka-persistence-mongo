@@ -15,13 +15,13 @@ import scala.concurrent.duration._
 
 object CasbahJournalSpec {
 
-  val config = ConfigFactory.parseString(
-    """
+  def config(port: Int) = ConfigFactory.parseString(
+    s"""
       |akka.persistence.journal.plugin = "casbah-journal"
       |akka.persistence.snapshot-store.local.dir = "target/snapshots"
       |akka.persistence.publish-plugin-commands = on
       |akka.persistence.publish-confirmations = on
-      |casbah-journal.mongo-url = "mongodb://localhost:27017/store.messages"
+      |casbah-journal.mongo-url = "mongodb://localhost:$port/store.messages"
     """.stripMargin)
 
   case class Delete(snr: Long, permanent: Boolean)
@@ -80,9 +80,13 @@ object CasbahJournalSpec {
 }
 
 import CasbahJournalSpec._
+import PortServer._
 
-class CasbahJournalSpec extends TestKit(ActorSystem("test", config)) with ImplicitSender with WordSpecLike
-    with Matchers with MongoCleanup {
+class CasbahJournalSpec extends TestKit(ActorSystem("test", config(freePort)))
+    with ImplicitSender
+    with WordSpecLike
+    with Matchers
+    with MongoCleanup {
 
   "A Casbah journal" should {
 

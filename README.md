@@ -1,6 +1,8 @@
 Mongo Journal for Akka Persistence
 ==================================
 
+[![Build Status](https://travis-ci.org/ddevore/akka-persistence-mongo.png)](https://travis-ci.org/reactant/akka-persistence-mongo)
+
 A replicated [Akka Persistence](http://doc.akka.io/docs/akka/2.3-M2/scala/persistence.html) journal backed by [MongoDB Casbah](http://mongodb.github.io/casbah/).
 
 Prerequisites
@@ -22,7 +24,7 @@ Installation
 
 Build and install the journal plugin to your local Ivy cache with `sbt publishLocal` (requires sbt 0.13). It can then be included as dependency:
 
-    libraryDependencies += "com.github.ddevore" %% "akka-persistence-mongo" % "0.2-SNAPSHOT"
+    libraryDependencies += "com.github.ddevore" %% "akka-persistence-mongo-casbah" % "0.3-SNAPSHOT"
 
 Configuration
 -------------

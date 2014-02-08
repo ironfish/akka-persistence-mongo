@@ -13,11 +13,13 @@ import scala.util.control.NoStackTrace
 
 object CasbahLoadSpec {
 
-  val config = ConfigFactory.parseString(
-    """
+  def config(port: Int) = ConfigFactory.parseString(
+    s"""
       |akka.persistence.journal.plugin = "casbah-journal"
       |akka.persistence.snapshot-store.local.dir = "target/snapshots"
-      |casbah-journal.mongo-url = "mongodb://localhost:27017/store.messages"
+      |akka.persistence.publish-plugin-commands = on
+      |akka.persistence.publish-confirmations = on
+      |casbah-journal.mongo-url = "mongodb://localhost:$port/store.messages"
     """.stripMargin)
 
   trait Measure extends { this: Actor ⇒
@@ -69,9 +71,13 @@ object CasbahLoadSpec {
 }
 
 import CasbahLoadSpec._
+import PortServer._
 
-class CasbahLoadSpec extends TestKit(ActorSystem("test", config)) with ImplicitSender with WordSpecLike with Matchers
-  with MongoCleanup {
+class CasbahLoadSpec extends TestKit(ActorSystem("test", config(freePort)))
+    with ImplicitSender
+    with WordSpecLike
+    with Matchers
+    with MongoCleanup {
 
   "A Casbah journal" should {
     "have some reasonable write throughput" in {
