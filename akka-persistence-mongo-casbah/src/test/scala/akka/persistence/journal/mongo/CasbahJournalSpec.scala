@@ -94,7 +94,7 @@ class CasbahJournalSpec extends TestKit(ActorSystem("test", config(freePort)))
       val processor1 = system.actorOf(Props(classOf[ProcessorA], "p1"))
       1L to 16L foreach { i =>
         processor1 ! Persistent(s"a-$i")
-        expectMsgAllOf(1 second, s"a-$i", i, false)
+        expectMsgAllOf(3 second, s"a-$i", i, false)
       }
 
       val processor2 = system.actorOf(Props(classOf[ProcessorA], "p1"))
