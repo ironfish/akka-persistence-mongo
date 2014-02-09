@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <!-- redirects JUL logging to logback -->
+    <contextListener class="ch.qos.logback.classic.jul.LevelChangePropagator"/>
+
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <target>System.out</target>
+        <encoder>
+            <pattern>%date{MM/dd HH:mm:ss} %-5level[%thread] %logger{1} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- <appender name="FILE" class="ch.qos.logback.core.FileAppender">
+        <file>akka.log</file>
+        <append>false</append>
+        <encoder>
+            <pattern>%date{MM/dd HH:mm:ss} %-5level[%thread] %logger{1} - %msg%n</pattern>
+        </encoder>
+    </appender> -->
+
+    <logger name="akka" level="ERROR" />
+    <!-- turns off reactivemongo logging -->
+    <logger name="reactivemongo" level="OFF"/>
+    <!-- turns off embedded mongo logging -->
+    <logger name="de.flapdoodle.embed" level="OFF"/>
+
+    <root level="ERROR">
+        <appender-ref ref="CONSOLE"/>
+    </root>
+
+</configuration>
