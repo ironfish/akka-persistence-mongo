@@ -1,7 +1,7 @@
 Mongo Journal for Akka Persistence
 ==================================
 
-[![Build Status](https://travis-ci.org/ddevore/akka-persistence-mongo.png)](https://travis-ci.org/ddevore/akka-persistence-mongo)
+[![Build Status](https://travis-ci.org/ddevore/akka-persistence-mongo.png?branch=master)](https://travis-ci.org/ddevore/akka-persistence-mongo)
 
 A replicated [Akka Persistence](http://doc.akka.io/docs/akka/2.3-M2/scala/persistence.html) journal backed by [MongoDB Casbah](http://mongodb.github.io/casbah/).
 
