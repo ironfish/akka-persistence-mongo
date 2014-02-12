@@ -18,11 +18,11 @@ trait MongoCleanup extends EmbeddedMongoSupport with BeforeAndAfterAll { this: T
   val journalConfig = system.settings.config.getConfig("casbah-journal")
   val snapshotConfig = system.settings.config.getConfig("akka.persistence.snapshot-store.local")
 
-  override protected def beforeAll(): Unit = {
-    embeddedMongoStartup
+  override def beforeAll(): Unit = {
+    embeddedMongoStartup()
   }
 
-  override protected def afterAll(): Unit = {
+  override def afterAll(): Unit = {
     val mongoUrl = journalConfig.getString("mongo-url")
     val uri = MongoClientURI(mongoUrl)
     val client = MongoClient(uri)
@@ -32,6 +32,7 @@ trait MongoCleanup extends EmbeddedMongoSupport with BeforeAndAfterAll { this: T
     FileUtils.deleteDirectory(new File(snapshotConfig.getString("dir")))
     client.close()
     system.shutdown()
-    embeddedMongoShutdown
+    system.awaitTermination()
+    embeddedMongoShutdown()
   }
 }

@@ -62,10 +62,10 @@ trait CasbahHelper {
     builder.result()
   }
 
-  def delMatchStatement(processorId: String, sequenceNr: Long): MongoDBObject =
+  def delStatement(processorId: String, sequenceNr: Long): MongoDBObject =
     MongoDBObject(ProcessorIdKey -> processorId, SequenceNrKey -> sequenceNr)
 
-  def delLteStatement(processorId: String, toSequenceNr: Long): MongoDBObject =
+  def delToStatement(processorId: String, toSequenceNr: Long): MongoDBObject =
     MongoDBObject(
       ProcessorIdKey -> processorId,
       SequenceNrKey  -> MongoDBObject("$lte" -> toSequenceNr))
@@ -82,7 +82,7 @@ trait CasbahHelper {
   def groupStatement: MongoDBObject =
     MongoDBObject("$group" ->
       MongoDBObject(
-        AggIdKey     -> MongoDBObject(ProcessorIdKey -> "$processorId", SequenceNrKey -> "$sequenceNr"),
+        AggIdKey      -> MongoDBObject(ProcessorIdKey -> "$processorId", SequenceNrKey -> "$sequenceNr"),
         AddDetailsKey -> MongoDBObject("$addToSet" -> MongoDBObject(MarkerKey -> "$marker", MessageKey -> "$message"))))
 
   def sortStatement: MongoDBObject =

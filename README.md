@@ -3,7 +3,7 @@ Mongo Journal for Akka Persistence
 
 [![Build Status](https://travis-ci.org/ddevore/akka-persistence-mongo.png?branch=master)](https://travis-ci.org/ddevore/akka-persistence-mongo)
 
-A replicated [Akka Persistence](http://doc.akka.io/docs/akka/2.3-M2/scala/persistence.html) journal backed by [MongoDB Casbah](http://mongodb.github.io/casbah/).
+A replicated [Akka Persistence](http://doc.akka.io/docs/akka/2.3.0-RC1/scala/persistence.html) journal backed by [MongoDB Casbah](http://mongodb.github.io/casbah/).
 
 Prerequisites
 -------------
@@ -47,7 +47,7 @@ The default write concern is `WriteConcern.Safe`. This will be configurable some
 Status
 ------
 
-- All operations required by the Akka Persistence [journal plugin API](http://doc.akka.io/docs/akka/2.3-M2/scala/persistence.html#journal-plugin-api) are supported.
+- All operations required by the Akka Persistence [journal plugin API](http://doc.akka.io/docs/akka/2.3.0-RC1/scala/persistence.html#journal-plugin-api) are supported.
 - Message writes are batched to optimize throughput.
 - When using channels, confirmation writes are batched to optimize throughput.
 - Deletes (marked & permanent) are batched to optimize throughput.
