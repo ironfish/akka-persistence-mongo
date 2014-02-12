@@ -32,25 +32,25 @@ class CasbahJournal extends SyncWriteJournal with CasbahRecovery with CasbahHelp
   def msgFromBytes(a: Array[Byte]) = serialization.deserialize(a, classOf[PersistentRepr]).get
 
   def writeMessages(persistentBatch: immutable.Seq[PersistentRepr]): Unit = {
-    implicit val wcs = WriteConcern.Safe
+    implicit val concern = WriteConcern.Safe
 
     val batch = persistentBatch.map(pr => writeJSON(pr.processorId, pr.sequenceNr, msgToBytes(pr)))
     collection.insert(batch:_ *)
   }
 
   def writeConfirmations(confirmations: immutable.Seq[akka.persistence.PersistentConfirmation]): Unit = {
-    implicit val wcs = WriteConcern.Safe
+    implicit val concern = WriteConcern.Safe
 
     val batch = confirmations map { c => confirmJSON(c.processorId, c.sequenceNr, c.channelId) }
     collection.insert(batch:_ *)
   }
 
   def deleteMessages(messageIds: immutable.Seq[akka.persistence.PersistentId], permanent: Boolean): Unit = {
-    implicit val wcs = WriteConcern.Safe
+    implicit val concern = WriteConcern.Safe
 
     if (permanent) {
-      val batch = messageIds map { mid => delMatchStatement(mid.processorId, mid.sequenceNr) }
-      collection.remove(delOrStatement(batch.toList), wcs)
+      val batch = messageIds map { mid => delStatement(mid.processorId, mid.sequenceNr) }
+      collection.remove(delOrStatement(batch.toList), concern)
     } else {
       val batch = messageIds map { mid => deleteMarkJSON(mid.processorId, mid.sequenceNr) }
       collection.insert(batch:_ *)
@@ -58,17 +58,21 @@ class CasbahJournal extends SyncWriteJournal with CasbahRecovery with CasbahHelp
   }
 
   def deleteMessagesTo(processorId: String, toSequenceNr: Long, permanent: Boolean): Unit = {
-    implicit val wcs = WriteConcern.Safe
+    implicit val concern = WriteConcern.Safe
 
     if (permanent)
-      collection.remove(delLteStatement(processorId, toSequenceNr), wcs)
+      collection.remove(delToStatement(processorId, toSequenceNr), concern)
     else {
-      val cursor = collection.find(snrQueryStatement(processorId)).sort(minSnrSortStatement).limit(1)
-      if (cursor.hasNext) {
-        val fromSequenceNr = cursor.next().getAs[Long](SequenceNrKey).get
-        val batch = fromSequenceNr to toSequenceNr map {sequenceNr => deleteMarkJSON(processorId, sequenceNr) }
-        collection.insert(batch:_ *)
-      }
+      val msgs = collection.find(delToStatement(processorId, toSequenceNr)).sort(minSnrSortStatement).toList
+      val deletedMsgs = msgs.filter(_.get(MarkerKey).asInstanceOf[String] == MarkerDelete)
+      val msgsToDelete = msgs.filterNot(msg =>
+        deletedMsgs.exists(_.get(SequenceNrKey).asInstanceOf[Long] == msg.get(SequenceNrKey).asInstanceOf[Long]))
+      // val msgsToDelete = for {
+      //   msg <- msgs
+      //   if deletedMsgs.find(_.get(SequenceNrKey).asInstanceOf[Long] == msg.get(SequenceNrKey).asInstanceOf[Long]) == None
+      // } yield msg
+      val batch = msgsToDelete map { msg => deleteMarkJSON(processorId, msg.get(SequenceNrKey).asInstanceOf[Long]) }
+      collection.insert(batch:_ *)
     }
   }
 
