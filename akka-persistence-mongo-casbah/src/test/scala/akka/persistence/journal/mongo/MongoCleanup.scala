@@ -13,23 +13,25 @@ import org.apache.commons.io.FileUtils
 
 import org.scalatest.{Suite, BeforeAndAfterAll}
 
-trait MongoCleanup extends EmbeddedMongoSupport with BeforeAndAfterAll { this: TestKit with Suite =>
+trait MongoCleanup extends EmbeddedMongoSupport
+    with BeforeAndAfterAll
+    with MongoPersistenceJournalRoot
+    with MongoPersistenceSnapshotRoot { this: TestKit with Suite =>
 
-  val journalConfig = system.settings.config.getConfig("casbah-journal")
-  val snapshotConfig = system.settings.config.getConfig("akka.persistence.snapshot-store.local")
+  override def configJournal = system.settings.config.getConfig("casbah-journal")
+  override def configSnapshot = system.settings.config.getConfig("akka.persistence.snapshot-store")
 
   override def beforeAll(): Unit = {
     embeddedMongoStartup()
   }
 
   override def afterAll(): Unit = {
-    val mongoUrl = journalConfig.getString("mongo-url")
-    val uri = MongoClientURI(mongoUrl)
+    val uri = MongoClientURI(configMongoUrl)
     val client = MongoClient(uri)
     val db = client(uri.database.get)
     val coll = db(uri.collection.get)
     coll.drop()
-    FileUtils.deleteDirectory(new File(snapshotConfig.getString("dir")))
+    FileUtils.deleteDirectory(new File(configSnapshotLocalDir))
     client.close()
     system.shutdown()
     system.awaitTermination()

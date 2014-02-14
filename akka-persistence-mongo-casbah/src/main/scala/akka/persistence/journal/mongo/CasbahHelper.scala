@@ -4,8 +4,19 @@
 package akka.persistence.journal.mongo
 
 import com.mongodb.casbah.Imports._
+import akka.persistence.journal.mongo.MongoPersistenceRoot.{ReplicasAcknowledged, Journaled, Acknowledged, MongoWriteConcern}
 
-trait CasbahHelper {
+private[this] object CasbahHelper {
+
+  implicit def configCasbahWriteConcern(mwc: MongoWriteConcern): WriteConcern = mwc match {
+    case Acknowledged => WriteConcern.Safe
+    case Journaled => WriteConcern.JournalSafe
+    case ReplicasAcknowledged => WriteConcern.ReplicasSafe
+  }
+}
+
+private[mongo] trait CasbahHelper extends MongoPersistenceJournalRoot {
+  import CasbahHelper._
 
   val ProcessorIdKey = "processorId"
   val SequenceNrKey = "sequenceNr"
@@ -20,20 +31,29 @@ trait CasbahHelper {
   def markerConfirmParseSuffix(cId: String) = cId.substring(2)
   val MarkerDelete = "D"
 
-  val idx1 = MongoDBObject(
+  private[this] val idx1 = MongoDBObject(
     "processorId"         -> 1,
     "sequenceNr"          -> 1,
     "marker"              -> 1)
 
-  val idx1Options =
+  private[this] val idx1Options =
     MongoDBObject("unique" -> true)
 
-  val idx2 = MongoDBObject(
+  private[this] val idx2 = MongoDBObject(
     "processorId"         -> 1,
     "sequenceNr"          -> 1)
 
-  val idx3 =
+  private[this] val idx3 =
     MongoDBObject("sequenceNr" -> 1)
+
+  private[this] val uri = MongoClientURI(configMongoUrl)
+  val client =  MongoClient(uri)
+  private[this] val db = client(uri.database.get)
+  val collection = db(uri.collection.get)
+
+  collection.ensureIndex(idx1, idx1Options)
+  collection.ensureIndex(idx2)
+  collection.ensureIndex(idx3)
 
   def writeJSON(pId: String, sNr: Long, msg: Array[Byte]) = {
     val builder = MongoDBObject.newBuilder
@@ -96,4 +116,6 @@ trait CasbahHelper {
 
   def minSnrSortStatement: MongoDBObject =
     MongoDBObject(SequenceNrKey -> 1)
+
+  def casbahWriteConcern: WriteConcern = configMongoWriteConcern
 }

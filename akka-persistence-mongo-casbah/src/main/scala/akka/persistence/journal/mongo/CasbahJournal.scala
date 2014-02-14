@@ -12,42 +12,30 @@ import com.mongodb.casbah.Imports._
 
 import scala.collection.immutable
 
-class CasbahJournal extends SyncWriteJournal with CasbahRecovery with CasbahHelper with ActorLogging {
-  val config = context.system.settings.config.getConfig("casbah-journal")
+class CasbahJournal extends SyncWriteJournal
+    with CasbahRecovery
+    with CasbahHelper
+    with ActorLogging {
 
-  val mongoUrl = config.getString("mongo-url")
+  override def configJournal = context.system.settings.config.getConfig("casbah-journal")
+  implicit val concern = casbahWriteConcern
 
   val serialization = SerializationExtension(context.system)
 
-  val uri = MongoClientURI(mongoUrl)
-  val client =  MongoClient(uri)
-  val db = client(uri.database.get)
-  val collection = db(uri.collection.get)
-
-  collection.ensureIndex(idx1, idx1Options)
-  collection.ensureIndex(idx2)
-  collection.ensureIndex(idx3)
-
-  def msgToBytes(p: PersistentRepr): Array[Byte] = serialization.serialize(p).get
-  def msgFromBytes(a: Array[Byte]) = serialization.deserialize(a, classOf[PersistentRepr]).get
+  private[mongo] def msgToBytes(p: PersistentRepr): Array[Byte] = serialization.serialize(p).get
+  private[mongo] def msgFromBytes(a: Array[Byte]) = serialization.deserialize(a, classOf[PersistentRepr]).get
 
   def writeMessages(persistentBatch: immutable.Seq[PersistentRepr]): Unit = {
-    implicit val concern = WriteConcern.Safe
-
     val batch = persistentBatch.map(pr => writeJSON(pr.processorId, pr.sequenceNr, msgToBytes(pr)))
     collection.insert(batch:_ *)
   }
 
   def writeConfirmations(confirmations: immutable.Seq[akka.persistence.PersistentConfirmation]): Unit = {
-    implicit val concern = WriteConcern.Safe
-
     val batch = confirmations map { c => confirmJSON(c.processorId, c.sequenceNr, c.channelId) }
     collection.insert(batch:_ *)
   }
 
   def deleteMessages(messageIds: immutable.Seq[akka.persistence.PersistentId], permanent: Boolean): Unit = {
-    implicit val concern = WriteConcern.Safe
-
     if (permanent) {
       val batch = messageIds map { mid => delStatement(mid.processorId, mid.sequenceNr) }
       collection.remove(delOrStatement(batch.toList), concern)
@@ -58,8 +46,6 @@ class CasbahJournal extends SyncWriteJournal with CasbahRecovery with CasbahHelp
   }
 
   def deleteMessagesTo(processorId: String, toSequenceNr: Long, permanent: Boolean): Unit = {
-    implicit val concern = WriteConcern.Safe
-
     if (permanent)
       collection.remove(delToStatement(processorId, toSequenceNr), concern)
     else {
@@ -67,10 +53,6 @@ class CasbahJournal extends SyncWriteJournal with CasbahRecovery with CasbahHelp
       val deletedMsgs = msgs.filter(_.get(MarkerKey) == MarkerDelete)
       val msgsToDelete = msgs.filterNot(msg =>
         deletedMsgs.exists(_.get(SequenceNrKey) == msg.get(SequenceNrKey)))
-      // val msgsToDelete = for {
-      //   msg <- msgs
-      //   if deletedMsgs.find(_.get(SequenceNrKey).asInstanceOf[Long] == msg.get(SequenceNrKey).asInstanceOf[Long]) == None
-      // } yield msg
       val batch = msgsToDelete map { msg => deleteMarkJSON(processorId, msg.get(SequenceNrKey).asInstanceOf[Long]) }
       collection.insert(batch:_ *)
     }

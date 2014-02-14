@@ -3,20 +3,11 @@
  */
 package akka.persistence.journal.mongo
 
-import java.util.concurrent.atomic.AtomicInteger
-
 import akka.actor._
-import akka.persistence._
-import akka.persistence.JournalProtocol._
 import akka.persistence.journal.JournalSpec
 import akka.testkit._
 
 import com.typesafe.config.ConfigFactory
-
-import org.scalatest.{Matchers, BeforeAndAfterEach, WordSpecLike}
-
-import scala.collection.immutable.Seq
-import scala.reflect.ClassTag
 
 object CasbahJournalSpec {
   def config(port: Int) = ConfigFactory.parseString(
@@ -24,6 +15,7 @@ object CasbahJournalSpec {
       |akka.persistence.journal.plugin = "casbah-journal"
       |akka.persistence.snapshot-store.local.dir = "target/snapshots"
       |casbah-journal.mongo-url = "mongodb://localhost:$port/store.messages"
+      |casbah-journal.mongo-journal-write-concern = "acknowledged"
     """.stripMargin).withFallback(JournalSpec.config)
 }
 
