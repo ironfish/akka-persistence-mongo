@@ -20,6 +20,7 @@ object CasbahLoadSpec {
       |akka.persistence.publish-plugin-commands = on
       |akka.persistence.publish-confirmations = on
       |casbah-journal.mongo-url = "mongodb://localhost:$port/store.messages"
+      |casbah-journal.mongo-journal-write-concern = "acknowledged"
     """.stripMargin)
 
   trait Measure extends { this: Actor ⇒

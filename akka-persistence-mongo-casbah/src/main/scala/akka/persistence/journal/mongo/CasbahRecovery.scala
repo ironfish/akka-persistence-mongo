@@ -13,7 +13,7 @@ import scala.concurrent._
 
 trait CasbahRecovery extends AsyncRecovery { this: CasbahJournal ⇒
 
-  implicit lazy val replayDispatcher = context.system.dispatchers.lookup(config.getString("replay-dispatcher"))
+  implicit lazy val replayDispatcher = context.system.dispatchers.lookup(configReplayDispatcher)
 
   def asyncReplayMessages(processorId: String, fromSequenceNr: Long, toSequenceNr: Long, max: Long)(replayCallback:
       PersistentRepr ⇒ Unit): Future[Unit] = Future {
@@ -53,8 +53,8 @@ trait CasbahRecovery extends AsyncRecovery { this: CasbahJournal ⇒
           jsonAccepted.map(_._2.asInstanceOf[DBObject].get(MessageKey).asInstanceOf[Array[Byte]]).toSeq
 
         if (!message.isEmpty) { // might have orphan deletes/confirms
-          val messageOut = msgFromBytes(message.head).update(confirms = channels.to[immutable.Seq],
-            deleted = {if (deleted.isEmpty) false else true})
+          val messageOut = msgFromBytes(message.head).update(deleted = {if (deleted.isEmpty) false else true},
+            confirms = channels.to[immutable.Seq])
           replayCallback(messageOut)
         }
 

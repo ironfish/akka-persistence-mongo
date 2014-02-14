@@ -45,19 +45,19 @@ trait JournalSpec extends WordSpecLike with Matchers with BeforeAndAfterEach { t
   }
 
   def writeMessages(from: Int, to: Int, pid: String, sender: ActorRef): Unit = {
-    val msgs = from to to map { i => PersistentRepr(payload = s"a-${i}", sequenceNr = i, processorId = pid, sender = sender) }
+    val msgs = from to to map { i => PersistentRepr(payload = s"a-$i", sequenceNr = i, processorId = pid, sender = sender) }
     val probe = TestProbe()
 
     journal ! WriteMessages(msgs, probe.ref)
 
     probe.expectMsg(WriteMessagesSuccess)
     from to to foreach { i =>
-      probe.expectMsgPF() { case WriteMessageSuccess(PersistentImpl(payload, `i`, `pid`, _, _, `sender`)) => payload should be (s"a-${i}") }
+      probe.expectMsgPF() { case WriteMessageSuccess(PersistentImpl(payload, `i`, `pid`, _, _, `sender`)) => payload should be (s"a-$i") }
     }
   }
 
   def replayedMessage(snr: Long, deleted: Boolean = false, confirms: Seq[String] = Nil): ReplayedMessage =
-    ReplayedMessage(PersistentImpl(s"a-${snr}", snr, pid, deleted, confirms, senderProbe.ref))
+    ReplayedMessage(PersistentImpl(s"a-$snr", snr, pid, deleted, confirms, senderProbe.ref))
 
   def subscribe[T : ClassTag](subscriber: ActorRef) =
     system.eventStream.subscribe(subscriber, implicitly[ClassTag[T]].runtimeClass)
@@ -113,7 +113,7 @@ trait JournalSpec extends WordSpecLike with Matchers with BeforeAndAfterEach { t
     }
     "not replay permanently deleted messages (individual deletion)" in {
       val msgIds = List(PersistentIdImpl(pid, 3), PersistentIdImpl(pid, 4))
-      journal ! DeleteMessages(msgIds, true, Some(receiverProbe.ref))
+      journal ! DeleteMessages(msgIds, permanent = true, Some(receiverProbe.ref))
       receiverProbe.expectMsg(DeleteMessagesSuccess(msgIds))
 
       journal ! ReplayMessages(1, Long.MaxValue, Long.MaxValue, pid, receiverProbe.ref)
@@ -121,7 +121,7 @@ trait JournalSpec extends WordSpecLike with Matchers with BeforeAndAfterEach { t
       receiverProbe.expectMsg(ReplayMessagesSuccess)
     }
     "not replay permanently deleted messages (range deletion)" in {
-      val cmd = DeleteMessagesTo(pid, 3, true)
+      val cmd = DeleteMessagesTo(pid, 3, permanent = true)
       val sub = TestProbe()
 
       journal ! cmd
@@ -133,19 +133,17 @@ trait JournalSpec extends WordSpecLike with Matchers with BeforeAndAfterEach { t
     }
     "replay logically deleted messages with deleted field set to true (individual deletion)" in {
       val msgIds = List(PersistentIdImpl(pid, 3), PersistentIdImpl(pid, 4))
-      journal ! DeleteMessages(msgIds, false, Some(receiverProbe.ref))
+      journal ! DeleteMessages(msgIds, permanent = false, Some(receiverProbe.ref))
       receiverProbe.expectMsg(DeleteMessagesSuccess(msgIds))
 
       journal ! ReplayMessages(1, Long.MaxValue, Long.MaxValue, pid, receiverProbe.ref, replayDeleted = true)
-      1 to 5 foreach { i =>
-        i match {
-          case 1 | 2 | 5 => receiverProbe.expectMsg(replayedMessage(i))
-          case 3 | 4     => receiverProbe.expectMsg(replayedMessage(i, deleted = true))
-        }
+      1 to 5 foreach {
+        case i@(1 | 2 | 5) => receiverProbe.expectMsg(replayedMessage(i))
+        case i@(3 | 4)     => receiverProbe.expectMsg(replayedMessage(i, deleted = true))
       }
     }
     "replay logically deleted messages with deleted field set to true (range deletion)" in {
-      val cmd = DeleteMessagesTo(pid, 3, false)
+      val cmd = DeleteMessagesTo(pid, 3, permanent = false)
       val sub = TestProbe()
 
       journal ! cmd
@@ -153,11 +151,9 @@ trait JournalSpec extends WordSpecLike with Matchers with BeforeAndAfterEach { t
       sub.expectMsg(cmd)
 
       journal ! ReplayMessages(1, Long.MaxValue, Long.MaxValue, pid, receiverProbe.ref, replayDeleted = true)
-      1 to 5 foreach { i =>
-        i match {
-          case 1 | 2 | 3 => receiverProbe.expectMsg(replayedMessage(i, deleted = true))
-          case 4 | 5     => receiverProbe.expectMsg(replayedMessage(i))
-        }
+      1 to 5 foreach {
+        case i@(1 | 2 | 3) => receiverProbe.expectMsg(replayedMessage(i, deleted = true))
+        case i@(4 | 5)     => receiverProbe.expectMsg(replayedMessage(i))
       }
     }
     "replay confirmed messages with corresponding channel ids contained in the confirmed field" in {
@@ -168,24 +164,22 @@ trait JournalSpec extends WordSpecLike with Matchers with BeforeAndAfterEach { t
       receiverProbe.expectMsg(WriteConfirmationsSuccess(confs))
 
       journal ! ReplayMessages(1, Long.MaxValue, Long.MaxValue, pid, receiverProbe.ref, replayDeleted = true)
-      1 to 5 foreach { i =>
-        i match {
-          case 1 | 2 | 4 | 5 => receiverProbe.expectMsg(replayedMessage(i))
-          case 3 => receiverProbe.expectMsgPF() {
-            case ReplayedMessage(PersistentImpl(payload, `i`, `lpid`, false, confirms, _)) =>
-              confirms should have length (2)
-              confirms should contain ("c1")
-              confirms should contain ("c2")
-          }
+      1 to 5 foreach {
+        case i@(1 | 2 | 4 | 5) => receiverProbe.expectMsg(replayedMessage(i))
+        case i@3               => receiverProbe.expectMsgPF() {
+          case ReplayedMessage(PersistentImpl(payload, `i`, `lpid`, false, confirms, _)) =>
+            confirms should have length 2
+            confirms should contain("c1")
+            confirms should contain("c2")
         }
       }
     }
     "ignore orphan deletion markers" in {
       val msgIds = List(PersistentIdImpl(pid, 3), PersistentIdImpl(pid, 4))
-      journal ! DeleteMessages(msgIds, true, Some(receiverProbe.ref)) // delete message
+      journal ! DeleteMessages(msgIds, permanent = true, Some(receiverProbe.ref)) // delete message
       receiverProbe.expectMsg(DeleteMessagesSuccess(msgIds))
 
-      journal ! DeleteMessages(msgIds, false, Some(receiverProbe.ref)) // write orphan marker
+      journal ! DeleteMessages(msgIds, permanent = false, Some(receiverProbe.ref)) // write orphan marker
       receiverProbe.expectMsg(DeleteMessagesSuccess(msgIds))
 
       journal ! ReplayMessages(1, Long.MaxValue, Long.MaxValue, pid, receiverProbe.ref)
@@ -193,7 +187,7 @@ trait JournalSpec extends WordSpecLike with Matchers with BeforeAndAfterEach { t
     }
     "ignore orphan confirmation markers" in {
       val msgIds = List(PersistentIdImpl(pid, 3))
-      journal ! DeleteMessages(msgIds, true, Some(receiverProbe.ref)) // delete message
+      journal ! DeleteMessages(msgIds, permanent = true, Some(receiverProbe.ref)) // delete message
       receiverProbe.expectMsg(DeleteMessagesSuccess(msgIds))
 
       val confs = List(Confirmation(pid, "c1", 3), Confirmation(pid, "c2", 3))

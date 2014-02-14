@@ -23,6 +23,7 @@ object CasbahIntegrationJournalSpec {
       |akka.persistence.publish-plugin-commands = on
       |akka.persistence.publish-confirmations = on
       |casbah-journal.mongo-url = "mongodb://localhost:$port/store.messages"
+      |casbah-journal.mongo-journal-write-concern = "acknowledged"
     """.stripMargin)
 
   case class Delete(snr: Long, permanent: Boolean)
