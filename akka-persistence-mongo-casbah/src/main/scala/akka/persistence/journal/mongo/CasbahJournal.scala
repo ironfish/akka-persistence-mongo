@@ -64,9 +64,9 @@ class CasbahJournal extends SyncWriteJournal with CasbahRecovery with CasbahHelp
       collection.remove(delToStatement(processorId, toSequenceNr), concern)
     else {
       val msgs = collection.find(delToStatement(processorId, toSequenceNr)).sort(minSnrSortStatement).toList
-      val deletedMsgs = msgs.filter(_.get(MarkerKey).asInstanceOf[String] == MarkerDelete)
+      val deletedMsgs = msgs.filter(_.get(MarkerKey) == MarkerDelete)
       val msgsToDelete = msgs.filterNot(msg =>
-        deletedMsgs.exists(_.get(SequenceNrKey).asInstanceOf[Long] == msg.get(SequenceNrKey).asInstanceOf[Long]))
+        deletedMsgs.exists(_.get(SequenceNrKey) == msg.get(SequenceNrKey)))
       // val msgsToDelete = for {
       //   msg <- msgs
       //   if deletedMsgs.find(_.get(SequenceNrKey).asInstanceOf[Long] == msg.get(SequenceNrKey).asInstanceOf[Long]) == None

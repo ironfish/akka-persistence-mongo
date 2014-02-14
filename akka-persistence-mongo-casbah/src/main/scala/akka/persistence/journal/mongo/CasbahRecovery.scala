@@ -44,10 +44,10 @@ trait CasbahRecovery extends AsyncRecovery { this: CasbahJournal ⇒
         val channels: Seq[String] =
           jsonChannels.map(_._2.asInstanceOf[DBObject].get(MarkerKey).asInstanceOf[String].substring(2)).toSeq
 
-        val jsonDeleted = details.filter(_._2.asInstanceOf[DBObject].get(MarkerKey).asInstanceOf[String] == MarkerDelete)
+        val jsonDeleted = details.filter(_._2.asInstanceOf[DBObject].get(MarkerKey) == MarkerDelete)
         val deleted: Seq[String] = jsonDeleted.map(_._2.asInstanceOf[DBObject].get(MarkerKey).asInstanceOf[String]).toSeq
 
-        val jsonAccepted = details.filter(_._2.asInstanceOf[DBObject].get(MarkerKey).asInstanceOf[String] == MarkerAccepted)
+        val jsonAccepted = details.filter(_._2.asInstanceOf[DBObject].get(MarkerKey) == MarkerAccepted)
 
         val message: Seq[Array[Byte]] =
           jsonAccepted.map(_._2.asInstanceOf[DBObject].get(MessageKey).asInstanceOf[Array[Byte]]).toSeq
