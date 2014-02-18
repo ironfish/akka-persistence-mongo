@@ -1,7 +1,8 @@
-package akka.persistence.journal.mongo
+package akka.persistence.mongo.journal
 
 import akka.actor.{ Props, ActorSystem, Actor }
 import akka.persistence.{ Persistent, Processor }
+import akka.persistence.mongo.MongoCleanup
 import akka.testkit.{ ImplicitSender, TestKit }
 
 import com.typesafe.config.ConfigFactory
@@ -9,6 +10,7 @@ import com.typesafe.config.ConfigFactory
 import org.scalatest.{ Matchers, WordSpecLike }
 
 import scala.concurrent.duration._
+import scala.language.postfixOps
 import scala.util.control.NoStackTrace
 
 object CasbahLoadSpec {
@@ -72,13 +74,15 @@ object CasbahLoadSpec {
 }
 
 import CasbahLoadSpec._
-import PortServer._
+import akka.persistence.mongo.PortServer._
 
 class CasbahLoadSpec extends TestKit(ActorSystem("test", config(freePort)))
     with ImplicitSender
     with WordSpecLike
     with Matchers
     with MongoCleanup {
+
+  override val actorSystem = system
 
   "A Casbah journal" should {
     "have some reasonable write throughput" in {

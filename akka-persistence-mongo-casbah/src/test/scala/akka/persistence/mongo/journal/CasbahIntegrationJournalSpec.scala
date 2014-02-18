@@ -1,10 +1,11 @@
 /**
  *  Copyright (C) 2013-2014 Duncan DeVore. <http://reactant.org>
  */
-package akka.persistence.journal.mongo
+package akka.persistence.mongo.journal
 
 import akka.actor._
 import akka.persistence._
+import akka.persistence.mongo.MongoCleanup
 import akka.testkit._
 
 import com.typesafe.config.ConfigFactory
@@ -95,13 +96,15 @@ object CasbahIntegrationJournalSpec {
 }
 
 import CasbahIntegrationJournalSpec._
-import PortServer._
+import akka.persistence.mongo.PortServer._
 
 class CasbahIntegrationJournalSpec extends TestKit(ActorSystem("test", config(freePort)))
     with ImplicitSender
     with WordSpecLike
     with Matchers
     with MongoCleanup {
+
+  override val actorSystem = system
 
   def subscribeToConfirmation(probe: TestProbe): Unit =
     system.eventStream.subscribe(probe.ref, classOf[Delivered])

@@ -1,10 +1,11 @@
 /**
  *  Copyright (C) 2013-2014 Duncan DeVore. <http://reactant.org>
  */
-package akka.persistence.journal.mongo
+package akka.persistence.mongo.journal
 
 import akka.actor._
-import akka.persistence.journal.JournalSpec
+import akka.persistence.mongo.JournalSpec
+import akka.persistence.mongo.MongoCleanup
 import akka.testkit._
 
 import com.typesafe.config.ConfigFactory
@@ -20,8 +21,11 @@ object CasbahJournalSpec {
 }
 
 import CasbahJournalSpec._
-import PortServer._
+import akka.persistence.mongo.PortServer._
 
 class CasbahJournalSpec extends TestKit(ActorSystem("test", config(freePort)))
     with JournalSpec
-    with MongoCleanup
+    with MongoCleanup {
+
+  override val actorSystem = system
+}

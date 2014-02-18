@@ -1,7 +1,7 @@
 /**
  *  Copyright (C) 2013-2014 Duncan DeVore. <http://reactant.org>
  */
-package akka.persistence.journal.mongo
+package akka.persistence.mongo.journal
 
 import akka.persistence._
 import akka.persistence.journal.AsyncRecovery
@@ -36,27 +36,18 @@ trait CasbahRecovery extends AsyncRecovery { this: CasbahJournal ⇒
     def go(dcsItr: Iterator[DBObject], maxAcc: Long) {
       if (dcsItr.hasNext && maxAcc < max) {
         val dc = dcsItr.next()
-        val details = dc.get(AddDetailsKey).asInstanceOf[DBObject]
+        val details = dc.get(AddDetailsKey).asInstanceOf[DBObject].map(_._2.asInstanceOf[DBObject])
 
-        val jsonChannels =
-          details.filter(_._2.asInstanceOf[DBObject].get(MarkerKey).asInstanceOf[String].substring(0,1) == MarkerConfirmPrefix)
+        val channels = details.filter(_.get(MarkerKey).toString.substring(0,1) == MarkerConfirmPrefix)
+          .map(_.get(MarkerKey).toString.substring(2)).to[immutable.Seq]
 
-        val channels: Seq[String] =
-          jsonChannels.map(_._2.asInstanceOf[DBObject].get(MarkerKey).asInstanceOf[String].substring(2)).toSeq
+        val deleted = details.exists(_.get(MarkerKey) == MarkerDelete)
 
-        val jsonDeleted = details.filter(_._2.asInstanceOf[DBObject].get(MarkerKey) == MarkerDelete)
-        val deleted: Seq[String] = jsonDeleted.map(_._2.asInstanceOf[DBObject].get(MarkerKey).asInstanceOf[String]).toSeq
+        val message = details.find(_.get(MarkerKey) == MarkerAccepted).map(_.get(MessageKey)
+          .asInstanceOf[Array[Byte]]).map(fromBytes[PersistentRepr])
 
-        val jsonAccepted = details.filter(_._2.asInstanceOf[DBObject].get(MarkerKey) == MarkerAccepted)
-
-        val message: Seq[Array[Byte]] =
-          jsonAccepted.map(_._2.asInstanceOf[DBObject].get(MessageKey).asInstanceOf[Array[Byte]]).toSeq
-
-        if (!message.isEmpty) { // might have orphan deletes/confirms
-          val messageOut = msgFromBytes(message.head).update(deleted = {if (deleted.isEmpty) false else true},
-            confirms = channels.to[immutable.Seq])
-          replayCallback(messageOut)
-        }
+        // might have orphan deletes/confirms
+        if (!message.isEmpty) replayCallback(message.get.update(deleted = deleted, confirms = channels))
 
         go(dcsItr, maxAcc + 1L)
       }

@@ -1,7 +1,7 @@
 /**
  *  Copyright (C) 2013-2014 Duncan DeVore. <http://reactant.org>
  */
-package akka.persistence.journal.mongo
+package akka.persistence.mongo
 
 import akka.testkit.TestKit
 
@@ -13,7 +13,7 @@ import org.apache.commons.io.FileUtils
 
 import org.scalatest.{Suite, BeforeAndAfterAll}
 
-trait MongoCleanup extends EmbeddedMongoSupport
+private[mongo] trait MongoCleanup extends EmbeddedMongoSupport
     with BeforeAndAfterAll
     with MongoPersistenceJournalRoot
     with MongoPersistenceSnapshotRoot { this: TestKit with Suite =>
@@ -29,8 +29,7 @@ trait MongoCleanup extends EmbeddedMongoSupport
     val uri = MongoClientURI(configMongoUrl)
     val client = MongoClient(uri)
     val db = client(uri.database.get)
-    val coll = db(uri.collection.get)
-    coll.drop()
+    db.dropDatabase()
     FileUtils.deleteDirectory(new File(configSnapshotLocalDir))
     client.close()
     system.shutdown()

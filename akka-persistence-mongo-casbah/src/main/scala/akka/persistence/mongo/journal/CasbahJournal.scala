@@ -1,32 +1,29 @@
 /**
  *  Copyright (C) 2013-2014 Duncan DeVore. <http://reactant.org>
  */
-package akka.persistence.journal.mongo
+package akka.persistence.mongo.journal
 
 import akka.actor.ActorLogging
 import akka.persistence._
 import akka.persistence.journal.SyncWriteJournal
-import akka.serialization.SerializationExtension
 
 import com.mongodb.casbah.Imports._
 
 import scala.collection.immutable
 
-class CasbahJournal extends SyncWriteJournal
+private[persistence] class CasbahJournal extends SyncWriteJournal
     with CasbahRecovery
     with CasbahHelper
     with ActorLogging {
 
+  override val actorSystem = context.system
+  // TODO move to MongoPersistence.scala???
   override def configJournal = context.system.settings.config.getConfig("casbah-journal")
-  implicit val concern = casbahWriteConcern
 
-  val serialization = SerializationExtension(context.system)
-
-  private[mongo] def msgToBytes(p: PersistentRepr): Array[Byte] = serialization.serialize(p).get
-  private[mongo] def msgFromBytes(a: Array[Byte]) = serialization.deserialize(a, classOf[PersistentRepr]).get
+  implicit val concern = casbahJournalWriteConcern
 
   def writeMessages(persistentBatch: immutable.Seq[PersistentRepr]): Unit = {
-    val batch = persistentBatch.map(pr => writeJSON(pr.processorId, pr.sequenceNr, msgToBytes(pr)))
+    val batch = persistentBatch.map(pr => writeJSON(pr.processorId, pr.sequenceNr, pr))
     collection.insert(batch:_ *)
   }
 
