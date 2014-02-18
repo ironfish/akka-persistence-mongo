@@ -10,6 +10,7 @@ lazy val baseSettings = Seq(
 def AkkaPersistenceMongoProject(name: String): Project = (
   Project(name, file(name))
   settings(baseSettings: _*)
+  settings(scalacOptions ++= Seq( "-deprecation", "-unchecked", "-feature" ))
   settings(
     parallelExecution in Test := false,
     libraryDependencies ++= Seq(

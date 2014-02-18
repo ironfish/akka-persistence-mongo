@@ -1,4 +1,4 @@
-package akka.persistence.journal
+package akka.persistence.mongo
 
 import java.util.concurrent.atomic.AtomicInteger
 

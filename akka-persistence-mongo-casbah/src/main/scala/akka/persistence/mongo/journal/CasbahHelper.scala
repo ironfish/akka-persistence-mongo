@@ -1,22 +1,15 @@
 /**
  *  Copyright (C) 2013-2014 Duncan DeVore. <http://reactant.org>
  */
-package akka.persistence.journal.mongo
+package akka.persistence.mongo.journal
+
+import akka.persistence.PersistentRepr
 
 import com.mongodb.casbah.Imports._
-import akka.persistence.journal.mongo.MongoPersistenceRoot.{ReplicasAcknowledged, Journaled, Acknowledged, MongoWriteConcern}
 
-private[this] object CasbahHelper {
-
-  implicit def configCasbahWriteConcern(mwc: MongoWriteConcern): WriteConcern = mwc match {
-    case Acknowledged => WriteConcern.Safe
-    case Journaled => WriteConcern.JournalSafe
-    case ReplicasAcknowledged => WriteConcern.ReplicasSafe
-  }
-}
+import akka.persistence.mongo.MongoPersistenceJournalRoot
 
 private[mongo] trait CasbahHelper extends MongoPersistenceJournalRoot {
-  import CasbahHelper._
 
   val ProcessorIdKey = "processorId"
   val SequenceNrKey = "sequenceNr"
@@ -55,12 +48,12 @@ private[mongo] trait CasbahHelper extends MongoPersistenceJournalRoot {
   collection.ensureIndex(idx2)
   collection.ensureIndex(idx3)
 
-  def writeJSON(pId: String, sNr: Long, msg: Array[Byte]) = {
+  def writeJSON(pId: String, sNr: Long, pr: PersistentRepr) = {
     val builder = MongoDBObject.newBuilder
     builder += ProcessorIdKey -> pId
     builder += SequenceNrKey  -> sNr
     builder += MarkerKey      -> MarkerAccepted
-    builder += MessageKey     -> msg
+    builder += MessageKey     -> toBytes(pr)
     builder.result()
   }
 
@@ -117,5 +110,5 @@ private[mongo] trait CasbahHelper extends MongoPersistenceJournalRoot {
   def minSnrSortStatement: MongoDBObject =
     MongoDBObject(SequenceNrKey -> 1)
 
-  def casbahWriteConcern: WriteConcern = configMongoWriteConcern
+  def casbahJournalWriteConcern: WriteConcern = configMongoJournalWriteConcern
 }
