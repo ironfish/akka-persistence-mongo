@@ -13,7 +13,7 @@ import scala.collection.immutable
 
 private[persistence] class CasbahJournal extends SyncWriteJournal
     with CasbahRecovery
-    with CasbahHelper
+    with CasbahJournalHelper
     with ActorLogging {
 
   override val actorSystem = context.system

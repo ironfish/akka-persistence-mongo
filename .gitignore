@@ -11,6 +11,11 @@ project/plugins/project/
 
 # Scala-IDE specific
 .scala_dependencies
+.target
+.cache
+.classpath
+.project
+.settings/
 
 # Intellij specific
 *.iml

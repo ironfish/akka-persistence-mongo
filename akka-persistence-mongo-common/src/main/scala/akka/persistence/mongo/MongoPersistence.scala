@@ -15,15 +15,15 @@ import scala.reflect.classTag
 
 private[mongo] object MongoPersistenceRoot {
 
-  sealed trait MongoWriteConcern
-  case object Acknowledged extends MongoWriteConcern
-  case object Journaled extends MongoWriteConcern
-  case object ReplicasAcknowledged extends MongoWriteConcern
+  sealed trait MongoWriteConcern { def timeout: Int }
+  case class Acknowledged(timeout: Int) extends MongoWriteConcern
+  case class Journaled(timeout: Int) extends MongoWriteConcern
+  case class ReplicasAcknowledged(timeout: Int) extends MongoWriteConcern
 
-  implicit def configWriteConcern(concern: String): MongoWriteConcern = concern match {
-    case "acknowledged"          => Acknowledged
-    case "journaled"             => Journaled
-    case "replicas-acknowledged" => ReplicasAcknowledged
+  implicit def configWriteConcern(wc: (String, Int)): MongoWriteConcern = wc._1 match {
+    case "acknowledged"          => Acknowledged(wc._2)
+    case "journaled"             => Journaled(wc._2)
+    case "replicas-acknowledged" => ReplicasAcknowledged(wc._2)
   }
 }
 
@@ -41,11 +41,18 @@ private[mongo] trait MongoPersistenceJournalRoot extends MongoPersistenceRoot {
   def configJournal: Config
 //  def configJournal: Config = actorSystem.settings.config.getConfig("casbah-journal")
   def configReplayDispatcher = configJournal.getString("replay-dispatcher")
-  def configMongoUrl = configJournal.getString("mongo-url")
-  def configMongoJournalWriteConcern: MongoWriteConcern = configJournal.getString("mongo-journal-write-concern")
+  def configMongoJournalUrl = configJournal.getString("mongo-journal-url")
+  def configMongoJournalWriteConcern: MongoWriteConcern =
+    (configJournal.getString("mongo-journal-write-concern"),
+      configJournal.getInt("mongo-journal-write-concern-timeout"))
 }
 
 private[mongo] trait MongoPersistenceSnapshotRoot extends MongoPersistenceRoot {
   def configSnapshot: Config
+  def configMongoSnapshotUrl = configSnapshot.getString("mongo-snapshot-url")
   def configSnapshotLocalDir = configSnapshot.getString("local.dir")
+  def configMongoSnapshotWriteConcern: MongoWriteConcern =
+    (configSnapshot.getString("mongo-snapshot-write-concern"),
+      configSnapshot.getInt("mongo-snapshot-write-concern-timeout"))
+  def configMongoSnapshotLoadAttempts = configSnapshot.getInt("mongo-snapshot-load-attempts")
 }

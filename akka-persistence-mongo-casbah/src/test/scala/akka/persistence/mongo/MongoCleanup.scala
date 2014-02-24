@@ -19,18 +19,17 @@ private[mongo] trait MongoCleanup extends EmbeddedMongoSupport
     with MongoPersistenceSnapshotRoot { this: TestKit with Suite =>
 
   override def configJournal = system.settings.config.getConfig("casbah-journal")
-  override def configSnapshot = system.settings.config.getConfig("akka.persistence.snapshot-store")
+  override def configSnapshot = system.settings.config.getConfig("casbah-snapshot-store")
 
   override def beforeAll(): Unit = {
     embeddedMongoStartup()
   }
 
   override def afterAll(): Unit = {
-    val uri = MongoClientURI(configMongoUrl)
+    val uri = MongoClientURI(configMongoJournalUrl)
     val client = MongoClient(uri)
     val db = client(uri.database.get)
     db.dropDatabase()
-    FileUtils.deleteDirectory(new File(configSnapshotLocalDir))
     client.close()
     system.shutdown()
     system.awaitTermination()
