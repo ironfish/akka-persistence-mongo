@@ -36,18 +36,17 @@ trait CasbahRecovery extends AsyncRecovery { this: CasbahJournal ⇒
     def go(dcsItr: Iterator[DBObject], maxAcc: Long) {
       if (dcsItr.hasNext && maxAcc < max) {
         val dc = dcsItr.next()
-        val details = dc.get(AddDetailsKey).asInstanceOf[DBObject].map(_._2.asInstanceOf[DBObject])
+        val details = dc.as[MongoDBList](AddDetailsKey).map(_.asInstanceOf[DBObject])
 
-        val channels = details.filter(_.get(MarkerKey).toString.substring(0,1) == MarkerConfirmPrefix)
-          .map(_.get(MarkerKey).toString.substring(2)).to[immutable.Seq]
+        val confirms = details.filter(_.as[String](MarkerKey).substring(0,1) == MarkerConfirmPrefix)
+          .map(_.as[String](MarkerKey).substring(2)).to[immutable.Seq]
 
         val deleted = details.exists(_.get(MarkerKey) == MarkerDelete)
 
-        val message = details.find(_.get(MarkerKey) == MarkerAccepted).map(_.get(MessageKey)
-          .asInstanceOf[Array[Byte]]).map(fromBytes[PersistentRepr])
+        val message = details.find(_.get(MarkerKey) == MarkerAccepted).map(_.as[Array[Byte]](MessageKey))
+          .map(fromBytes[PersistentRepr])
 
-        // might have orphan deletes/confirms
-        if (!message.isEmpty) replayCallback(message.get.update(deleted = deleted, confirms = channels))
+        if (message.nonEmpty) replayCallback(message.get.update(deleted = deleted, confirms = confirms))
 
         go(dcsItr, maxAcc + 1L)
       }
@@ -55,7 +54,7 @@ trait CasbahRecovery extends AsyncRecovery { this: CasbahJournal ⇒
     go(dcsItr, 0L)
   }
 
-  override def asyncReadHighestSequenceNr(processorId: String, fromSequenceNr: Long): scala.concurrent.Future[Long] = future {
+  override def asyncReadHighestSequenceNr(processorId: String, fromSequenceNr: Long): Future[Long] = future {
     val cursor = collection.find(snrQueryStatement(processorId)).sort(maxSnrSortStatement).limit(1)
     if (cursor.hasNext) cursor.next().getAs[Long](SequenceNrKey).get else 0L
   }

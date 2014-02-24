@@ -19,13 +19,18 @@ object CasbahIntegrationJournalSpec {
   def config(port: Int) = ConfigFactory.parseString(
     s"""
       |akka.persistence.journal.plugin = "casbah-journal"
+      |akka.persistence.snapshot-store.plugin = "casbah-snapshot-store"
       |akka.persistence.journal.max-deletion-batch-size = 3
-      |akka.persistence.snapshot-store.local.dir = "target/snapshots"
       |akka.persistence.publish-plugin-commands = on
       |akka.persistence.publish-confirmations = on
-      |casbah-journal.mongo-url = "mongodb://localhost:$port/store.messages"
+      |casbah-journal.mongo-journal-url = "mongodb://localhost:$port/store.messages"
       |casbah-journal.mongo-journal-write-concern = "acknowledged"
+      |casbah-journal.mongo-journal-write-concern-timeout = 10000
+      |casbah-snapshot-store.mongo-snapshot-url = "mongodb://localhost:$port/store.snapshots"
+      |casbah-snapshot-store.mongo-snapshot-write-concern = "acknowledged"
+      |casbah-snapshot-store.mongo-snapshot-write-concern-timeout = 10000
     """.stripMargin)
+  //       |akka.persistence.snapshot-store.local.dir = "target/snapshots"
 
   case class Delete(snr: Long, permanent: Boolean)
   case class DeleteTo(snr: Long, permanent: Boolean)

@@ -1,9 +1,9 @@
 name := "akka-persistence-mongo"
 
-scalaVersion := "2.10.2"
+scalaVersion := "2.10.3"
 
 lazy val baseSettings = Seq(
-  version := "0.3-SNAPSHOT",
+  version := "0.4-SNAPSHOT",
   organization := "com.github.ddevore"
 )
 
@@ -14,7 +14,7 @@ def AkkaPersistenceMongoProject(name: String): Project = (
   settings(
     parallelExecution in Test := false,
     libraryDependencies ++= Seq(
-      "com.typesafe.akka"   %% "akka-testkit"                  % "2.3.0-RC1" % "test",
+      "com.typesafe.akka"   %% "akka-testkit"                  % "2.3.0-RC3" % "test",
       "org.scalatest"       %% "scalatest"                     % "2.0"       % "test",
       "commons-io"           % "commons-io"                    % "2.4"       % "test",
       "ch.qos.logback"       % "logback-classic"               % "1.1.1"     % "compile"
@@ -32,9 +32,7 @@ lazy val akkaPersistenceMongo = (
   aggregate(akkaPersistenceMongoCommon, akkaPersistenceMongoCasbah)
 )
 
-lazy val akkaPersistenceMongoCommon = (
-  AkkaPersistenceMongoProject("akka-persistence-mongo-common")
-)
+lazy val akkaPersistenceMongoCommon = AkkaPersistenceMongoProject("akka-persistence-mongo-common")
 
 lazy val akkaPersistenceMongoCasbah = (
   AkkaPersistenceMongoProject("akka-persistence-mongo-casbah")

@@ -9,7 +9,7 @@ import com.mongodb.casbah.Imports._
 
 import akka.persistence.mongo.MongoPersistenceJournalRoot
 
-private[mongo] trait CasbahHelper extends MongoPersistenceJournalRoot {
+private[mongo] trait CasbahJournalHelper extends MongoPersistenceJournalRoot {
 
   val ProcessorIdKey = "processorId"
   val SequenceNrKey = "sequenceNr"
@@ -39,7 +39,7 @@ private[mongo] trait CasbahHelper extends MongoPersistenceJournalRoot {
   private[this] val idx3 =
     MongoDBObject("sequenceNr" -> 1)
 
-  private[this] val uri = MongoClientURI(configMongoUrl)
+  private[this] val uri = MongoClientURI(configMongoJournalUrl)
   val client =  MongoClient(uri)
   private[this] val db = client(uri.database.get)
   val collection = db(uri.collection.get)
