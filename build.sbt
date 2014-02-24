@@ -38,3 +38,8 @@ lazy val akkaPersistenceMongoCasbah = (
   AkkaPersistenceMongoProject("akka-persistence-mongo-casbah")
   dependsOn(akkaPersistenceMongoCommon % "test->test;compile->compile")
 )
+
+lazy val akkaPersistenceMongoSampleApp = (
+  AkkaPersistenceMongoProject("akka-persistence-mongo-sample-app")
+  dependsOn(akkaPersistenceMongoCasbah % "test->test;compile->compile")
+)
