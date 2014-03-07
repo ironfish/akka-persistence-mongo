@@ -100,3 +100,11 @@ Allows for the selection of the youngest of {n} snapshots that the match upper b
 
 Minimal performance testing is included against a **native** instance. In general the journal will persist around 7000 to 8000 messages per second.
 
+## Author / Maintainer
+
+- [Duncan DeVore (@ironfish)](https://github.com/ddevore/)
+
+## Contributors
+
+- [Sean Walsh (@SeanWalshEsq)](https://github.com/sean-walsh/)
+- [Al Iacovella](https://github.com/aiacovella/)
