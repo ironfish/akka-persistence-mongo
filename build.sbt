@@ -25,7 +25,5 @@ lazy val akkaPersistenceMongoCasbah = (
   dependsOn(akkaPersistenceMongoCommon % Common.TestCompile)
 )
 
-lazy val akkaPersistenceMongoSampleApp = (
+lazy val akkaPersistenceMongoSampleApp =
   project in file(Common.NameSampleApp)
-  dependsOn(akkaPersistenceMongoCasbah % Common.TestCompile)
-)
