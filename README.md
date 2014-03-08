@@ -2,14 +2,14 @@
 
 [![Build Status](https://travis-ci.org/ddevore/akka-persistence-mongo.png?branch=master)](https://travis-ci.org/ddevore/akka-persistence-mongo)
 
-A replicated [Akka Persistence](http://doc.akka.io/docs/akka/2.3.0-RC3/scala/persistence.html) journal backed by [MongoDB Casbah](http://mongodb.github.io/casbah/).
+A replicated [Akka Persistence](http://doc.akka.io/docs/akka/2.3.0/scala/persistence.html) journal backed by [MongoDB Casbah](http://mongodb.github.io/casbah/).
 
 ## Prerequisites
 
 <table border="0">
   <tr>
     <td>Akka version: </td>
-    <td>2.3.0-RC3 or higher</td>
+    <td>2.3.0 or higher</td>
   </tr>
   <tr>
     <td>Mongo version: </td>
@@ -18,6 +18,25 @@ A replicated [Akka Persistence](http://doc.akka.io/docs/akka/2.3.0-RC3/scala/per
 </table>
 
 ## Installation
+
+The mongo journal driver is now available on the Maven Central Snapshot Repo.
+
+### SBT
+
+    resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots"
+
+    libraryDependencies ++= Seq(
+      "com.github.ddevore" %% "akka-persistence-mongo-casbah"  % "0.4-SNAPSHOT" % "compile")
+
+### Maven
+
+    <dependency>
+        <groupId>com.github.ddevore</groupId>
+        <artifactId>akka-persistence-mongo-casbah_2.10</artifactId>
+        <version>0.4-SNAPSHOT</version>
+    </dependency>
+
+### Build Locally
 
 Build and install the journal plugin to your local Ivy cache with `sbt publishLocal` (requires sbt 0.13). It can then be included as dependency:
 
@@ -89,12 +108,12 @@ Allows for the selection of the youngest of {n} snapshots that the match upper b
 
 ## Status
 
-- All operations required by the Akka Persistence [journal plugin API](http://doc.akka.io/docs/akka/2.3.0-RC3/scala/persistence.html#journal-plugin-api) are supported.
+- All operations required by the Akka Persistence [journal plugin API](http://doc.akka.io/docs/akka/2.3.0/scala/persistence.html#journal-plugin-api) are supported.
 - Message writes are batched to optimize throughput.
 - When using channels, confirmation writes are batched to optimize throughput.
 - Deletes (marked & permanent) are batched to optimize throughput.
 - Sharding is not yet supported.
-- This should be considered **experimental** as Akka-Persistence is still changing and the underlying storage structure may change.
+- Akka-Persistence is still considered **experimental** as such the underlying api may change based on user feedback.
 
 ## Performance
 

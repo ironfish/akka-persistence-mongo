@@ -22,7 +22,7 @@ object CasbahJournalSpec {
       |casbah-snapshot-store.mongo-snapshot-write-concern = "acknowledged"
       |casbah-snapshot-store.mongo-snapshot-write-concern-timeout = 10000
     """.stripMargin).withFallback(JournalSpec.config)
-}//       |akka.persistence.snapshot-store.local.dir = "target/snapshots"
+}
 
 import CasbahJournalSpec._
 import akka.persistence.mongo.PortServer._

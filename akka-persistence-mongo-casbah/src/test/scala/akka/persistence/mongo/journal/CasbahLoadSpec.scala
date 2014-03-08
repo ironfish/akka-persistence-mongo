@@ -28,7 +28,6 @@ object CasbahLoadSpec {
       |casbah-snapshot-store.mongo-snapshot-write-concern = "acknowledged"
       |casbah-snapshot-store.mongo-snapshot-write-concern-timeout = 10000
     """.stripMargin)
-  //       |akka.persistence.snapshot-store.local.dir = "target/snapshots"
 
   trait Measure extends { this: Actor ⇒
     val NanoToSecond = 1000.0 * 1000 * 1000

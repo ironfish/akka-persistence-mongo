@@ -39,7 +39,6 @@ private[mongo] trait MongoPersistenceRoot {
 
 private[mongo] trait MongoPersistenceJournalRoot extends MongoPersistenceRoot {
   def configJournal: Config
-//  def configJournal: Config = actorSystem.settings.config.getConfig("casbah-journal")
   def configReplayDispatcher = configJournal.getString("replay-dispatcher")
   def configMongoJournalUrl = configJournal.getString("mongo-journal-url")
   def configMongoJournalWriteConcern: MongoWriteConcern =
@@ -50,7 +49,7 @@ private[mongo] trait MongoPersistenceJournalRoot extends MongoPersistenceRoot {
 private[mongo] trait MongoPersistenceSnapshotRoot extends MongoPersistenceRoot {
   def configSnapshot: Config
   def configMongoSnapshotUrl = configSnapshot.getString("mongo-snapshot-url")
-  def configSnapshotLocalDir = configSnapshot.getString("local.dir")
+//  def configSnapshotLocalDir = configSnapshot.getString("local.dir")
   def configMongoSnapshotWriteConcern: MongoWriteConcern =
     (configSnapshot.getString("mongo-snapshot-write-concern"),
       configSnapshot.getInt("mongo-snapshot-write-concern-timeout"))
