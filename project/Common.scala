@@ -8,12 +8,12 @@ object Common {
   def Name = "akka-persistence-mongo"
   def NameCommon = Name + "-common"
   def NameCasbah = Name + "-casbah"
-  def NameSampleApp = Name + "-sample-app"
+  def NameCommandSourcingExampleApp = Name + "-command-sourcing-example-app"
   def Organization = "com.github.ddevore"
   def ScalaVersion = "2.10.3"
   def Version = "0.4-SNAPSHOT"
   def ParallelExecutionInTest = false
-  def ScalaCOptions = Seq( "-deprecation", "-unchecked", "-feature" )
+  def ScalaCOptions = Seq( "-deprecation", "-unchecked", "-feature", "-language:postfixOps" )
   def TestCompile = "test->test;compile->compile"
   val PomXtra = {
     <url>https://github.com/ddevore/akka-persistence-mongo</url>

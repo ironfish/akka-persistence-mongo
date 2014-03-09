@@ -14,16 +14,16 @@ packagedArtifacts in file(".") := Map.empty // don't publish root project
 
 lazy val root = (
   project in file(".")
-  aggregate(akkaPersistenceMongoCommon, akkaPersistenceMongoCasbah)
-)
+    aggregate(akkaPersistenceMongoCommon, akkaPersistenceMongoCasbah, akkaPersistenceMongoCommandSourcingExampleApp)
+  )
 
 lazy val akkaPersistenceMongoCommon =
   project in file(Common.NameCommon)
 
 lazy val akkaPersistenceMongoCasbah = (
   project in file(Common.NameCasbah)
-  dependsOn(akkaPersistenceMongoCommon % Common.TestCompile)
-)
+    dependsOn(akkaPersistenceMongoCommon % Common.TestCompile)
+  )
 
-lazy val akkaPersistenceMongoSampleApp =
-  project in file(Common.NameSampleApp)
+lazy val akkaPersistenceMongoCommandSourcingExampleApp =
+  project in file(Common.NameCommandSourcingExampleApp)
