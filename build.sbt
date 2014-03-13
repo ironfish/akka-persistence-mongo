@@ -10,7 +10,11 @@ parallelExecution in Test := Common.ParallelExecutionInTest
 
 scalacOptions ++= Common.ScalaCOptions
 
-packagedArtifacts in file(".") := Map.empty // don't publish root project
+publishLocal := {}
+
+publish := {}
+
+publishArtifact := false
 
 lazy val root = (
   project in file(".")
