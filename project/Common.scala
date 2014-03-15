@@ -11,7 +11,7 @@ object Common {
   def NameCommandSourcingExampleApp = Name + "-command-sourcing-example-app"
   def Organization = "com.github.ddevore"
   def ScalaVersion = "2.10.3"
-  def Version = "0.4-SNAPSHOT"
+  def Version = "0.5-SNAPSHOT"
   def ParallelExecutionInTest = false
   def ScalaCOptions = Seq( "-deprecation", "-unchecked", "-feature", "-language:postfixOps" )
   def TestCompile = "test->test;compile->compile"

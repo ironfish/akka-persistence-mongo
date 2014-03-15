@@ -26,21 +26,21 @@ The mongo journal driver is now available on the Maven Central Snapshot Repo.
     resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots"
 
     libraryDependencies ++= Seq(
-      "com.github.ddevore" %% "akka-persistence-mongo-casbah"  % "0.4-SNAPSHOT" % "compile")
+      "com.github.ddevore" %% "akka-persistence-mongo-casbah"  % "0.5-SNAPSHOT" % "compile")
 
 ### Maven
 
     <dependency>
         <groupId>com.github.ddevore</groupId>
         <artifactId>akka-persistence-mongo-casbah_2.10</artifactId>
-        <version>0.4-SNAPSHOT</version>
+        <version>0.5-SNAPSHOT</version>
     </dependency>
 
 ### Build Locally
 
 Build and install the journal plugin to your local Ivy cache with `sbt publishLocal` (requires sbt 0.13). It can then be included as dependency:
 
-    libraryDependencies += "com.github.ddevore" %% "akka-persistence-mongo-casbah" % "0.4-SNAPSHOT"
+    libraryDependencies += "com.github.ddevore" %% "akka-persistence-mongo-casbah" % "0.5-SNAPSHOT"
 
 ## Journal Configuration
 
@@ -66,7 +66,7 @@ As a result only the following write concerns are supported:
 - `journaled` [JournalSafe] - Exceptions are raised for network issues, and server errors; the write operation waits for the server to group commit to the journal file on disk.
 - `replicas-acknowledged` [ReplicasSafe] - Exceptions are raised for network issues and server errors; waits for at least 2 servers for the write operation.
 
-The default write concern is `acknowledged` [Safe]. To better understand MongoDB `WriteConcern` see [Write Concern](http://docs.mongodb.org/manual/core/write-concern/).
+The default write concern is `journaled` [JournalSafe]. To better understand MongoDB `WriteConcern` see [Write Concern](http://docs.mongodb.org/manual/core/write-concern/).
 
 ### casbah.journal.mongo-journal-write-concern-timeout
 
@@ -96,7 +96,7 @@ As a result only the following write concerns are supported:
 - `journaled` [JournalSafe] - Exceptions are raised for network issues, and server errors; the write operation waits for the server to group commit to the journal file on disk.
 - `replicas-acknowledged` [ReplicasSafe] - Exceptions are raised for network issues and server errors; waits for at least 2 servers for the write operation.
 
-The default write concern is `acknowledged` [Safe]. To better understand MongoDB `WriteConcern` see [Write Concern](http://docs.mongodb.org/manual/core/write-concern/).
+The default write concern is `journaled` [JournalSafe]. To better understand MongoDB `WriteConcern` see [Write Concern](http://docs.mongodb.org/manual/core/write-concern/).
 
 ### casbah.snapshot.mongo-snapshot-write-concern-timeout
 
@@ -104,7 +104,7 @@ This is an `Int` value that sets the timeout for the snapshot-store write concer
 
 ### casbah.snapshot.mongo-snapshot-load-attempts
 
-Allows for the selection of the youngest of {n} snapshots that the match upper bound. This helps where a snapshot may not have persisted correctly because of a JVM crash. As a result an attempt to load the snapshot may fail but an older may succeed. This is an `Int` value that defaults to 3.
+Allows for the selection of the youngest of `{n}` snapshots that the match upper bound. This helps where a snapshot may not have persisted correctly because of a JVM crash. As a result an attempt to load the snapshot may fail but an older may succeed. This is an `Int` value that defaults to 3.
 
 ## Status
 
@@ -118,6 +118,9 @@ Allows for the selection of the youngest of {n} snapshots that the match upper b
 ## Performance
 
 Minimal performance testing is included against a **native** instance. In general the journal will persist around 7000 to 8000 messages per second.
+
+## Example
+We now have an [example application](https://github.com/ddevore/akka-persistence-mongo/tree/master/akka-persistence-mongo-command-sourcing-example-app) that implements Akka-Persistence [command sourcing](http://doc.akka.io/docs/akka/2.3.0/scala/persistence.html#Processors). In this example, the journal acts as a write-ahead-log for whatever `Persistent` messages it recieves. In the future, we will add an application example that implements Akka-Persistence [event sourcing](http://doc.akka.io/docs/akka/2.3.0/scala/persistence.html#Event_sourcing).
 
 ## Author / Maintainer
 
