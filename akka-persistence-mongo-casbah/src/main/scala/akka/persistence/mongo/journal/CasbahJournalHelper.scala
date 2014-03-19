@@ -86,20 +86,15 @@ private[mongo] trait CasbahJournalHelper extends MongoPersistenceJournalRoot {
   def delOrStatement(elements: List[MongoDBObject]): MongoDBObject =
     MongoDBObject("$or" -> elements)
 
-  def matchStatement(processorId: String, fromSequenceNr: Long, toSequenceNr: Long): MongoDBObject =
-    MongoDBObject("$match" ->
-      MongoDBObject(
-        ProcessorIdKey -> processorId,
-        SequenceNrKey  -> MongoDBObject("$gte" -> fromSequenceNr, "$lte" -> toSequenceNr)))
+  def replayFindStatement(processorId: String, fromSequenceNr: Long, toSequenceNr: Long): MongoDBObject =
+    MongoDBObject(
+      ProcessorIdKey -> processorId,
+      SequenceNrKey  -> MongoDBObject("$gte" -> fromSequenceNr, "$lte" -> toSequenceNr))
 
-  def groupStatement: MongoDBObject =
-    MongoDBObject("$group" ->
-      MongoDBObject(
-        AggIdKey      -> MongoDBObject(ProcessorIdKey -> "$processorId", SequenceNrKey -> "$sequenceNr"),
-        AddDetailsKey -> MongoDBObject("$addToSet" -> MongoDBObject(MarkerKey -> "$marker", MessageKey -> "$message"))))
-
-  def sortStatement: MongoDBObject =
-    MongoDBObject("$sort" -> MongoDBObject(AggIdKey -> 1))
+  def recoverySortStatement = MongoDBObject(
+    "processorId" -> 1,
+    "sequenceNr"  -> 1,
+    "marker"      -> 1)
 
   def snrQueryStatement(processorId: String): MongoDBObject =
     MongoDBObject(ProcessorIdKey -> processorId)

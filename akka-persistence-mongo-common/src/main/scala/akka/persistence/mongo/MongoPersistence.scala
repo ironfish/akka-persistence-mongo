@@ -49,7 +49,6 @@ private[mongo] trait MongoPersistenceJournalRoot extends MongoPersistenceRoot {
 private[mongo] trait MongoPersistenceSnapshotRoot extends MongoPersistenceRoot {
   def configSnapshot: Config
   def configMongoSnapshotUrl = configSnapshot.getString("mongo-snapshot-url")
-//  def configSnapshotLocalDir = configSnapshot.getString("local.dir")
   def configMongoSnapshotWriteConcern: MongoWriteConcern =
     (configSnapshot.getString("mongo-snapshot-write-concern"),
       configSnapshot.getInt("mongo-snapshot-write-concern-timeout"))

@@ -25,33 +25,16 @@ trait CasbahRecovery extends AsyncRecovery { this: CasbahJournal ⇒
 
     import com.mongodb.casbah.Implicits._
 
-    val dcs = collection.aggregate(
-      matchStatement(processorId, fromSequenceNr, toSequenceNr),
-      groupStatement,
-      sortStatement)
-
-    val dcsItr = dcs.results.iterator
-
-    @scala.annotation.tailrec
-    def go(dcsItr: Iterator[DBObject], maxAcc: Long) {
-      if (dcsItr.hasNext && maxAcc < max) {
-        val dc = dcsItr.next()
-        val details = dc.as[MongoDBList](AddDetailsKey).map(_.asInstanceOf[DBObject])
-
-        val confirms = details.filter(_.as[String](MarkerKey).substring(0,1) == MarkerConfirmPrefix)
-          .map(_.as[String](MarkerKey).substring(2)).to[immutable.Seq]
-
-        val deleted = details.exists(_.get(MarkerKey) == MarkerDelete)
-
-        val message = details.find(_.get(MarkerKey) == MarkerAccepted).map(_.as[Array[Byte]](MessageKey))
-          .map(fromBytes[PersistentRepr])
-
-        if (message.nonEmpty) replayCallback(message.get.update(deleted = deleted, confirms = confirms))
-
-        go(dcsItr, maxAcc + 1L)
-      }
-    }
-    go(dcsItr, 0L)
+    val coll = collection.find(replayFindStatement(processorId, fromSequenceNr, toSequenceNr)).sort(recoverySortStatement)
+    val collSorted = immutable.SortedMap(coll.toList.zipWithIndex.groupBy(x => x._1.as[Long](SequenceNrKey)).toSeq: _*)
+    collSorted.flatMap { x =>
+      if (x._2.headOption.get._2 < max) {
+        val entry = x._2.find(_._1.get(MarkerKey) == MarkerAccepted).map(_._1.as[Array[Byte]](MessageKey)).map(fromBytes[PersistentRepr])
+        val deleted = x._2.exists(_._1.get(MarkerKey) == MarkerDelete)
+        val confirms = x._2.filter(_._1.as[String](MarkerKey).substring(0,1) == MarkerConfirmPrefix).map(_._1.as[String](MarkerKey).substring(2)).to[immutable.Seq]
+        if (entry.nonEmpty) Some(entry.get.update(deleted = deleted, confirms = confirms)) else None
+      } else None
+    } map replayCallback
   }
 
   override def asyncReadHighestSequenceNr(processorId: String, fromSequenceNr: Long): Future[Long] = future {
