@@ -26,21 +26,21 @@ The mongo journal driver is now available on the Maven Central Snapshot Repo.
     resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots"
 
     libraryDependencies ++= Seq(
-      "com.github.ddevore" %% "akka-persistence-mongo-casbah"  % "0.5-SNAPSHOT" % "compile")
+      "com.github.ddevore" %% "akka-persistence-mongo-casbah"  % "0.6-SNAPSHOT" % "compile")
 
 ### Maven
 
     <dependency>
         <groupId>com.github.ddevore</groupId>
         <artifactId>akka-persistence-mongo-casbah_2.10</artifactId>
-        <version>0.5-SNAPSHOT</version>
+        <version>0.6-SNAPSHOT</version>
     </dependency>
 
 ### Build Locally
 
 Build and install the journal plugin to your local Ivy cache with `sbt publishLocal` (requires sbt 0.13). It can then be included as dependency:
 
-    libraryDependencies += "com.github.ddevore" %% "akka-persistence-mongo-casbah" % "0.5-SNAPSHOT"
+    libraryDependencies += "com.github.ddevore" %% "akka-persistence-mongo-casbah" % "0.6-SNAPSHOT"
 
 ## Journal Configuration
 
