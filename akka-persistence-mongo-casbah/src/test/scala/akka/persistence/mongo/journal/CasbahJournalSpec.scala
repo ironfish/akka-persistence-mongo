@@ -3,33 +3,31 @@
  */
 package akka.persistence.mongo.journal
 
-import akka.actor._
-import akka.persistence.mongo.JournalSpec
+import akka.persistence.journal.JournalSpec
 import akka.persistence.mongo.MongoCleanup
-import akka.testkit._
+import akka.persistence.mongo.PortServer._
 
 import com.typesafe.config.ConfigFactory
 
 object CasbahJournalSpec {
-  def config(port: Int) = ConfigFactory.parseString(
+  val genConfig = ConfigFactory.parseString(
     s"""
       |akka.persistence.journal.plugin = "casbah-journal"
       |akka.persistence.snapshot-store.plugin = "casbah-snapshot-store"
-      |casbah-journal.mongo-journal-url = "mongodb://localhost:$port/store.messages"
+      |akka.persistence.publish-confirmations = on
+      |akka.persistence.publish-plugin-commands = on
+      |casbah-journal.mongo-journal-url = "mongodb://localhost:$freePort/store.messages"
       |casbah-journal.mongo-journal-write-concern = "acknowledged"
       |casbah-journal.mongo-journal-write-concern-timeout = 10000
-      |casbah-snapshot-store.mongo-snapshot-url = "mongodb://localhost:$port/store.snapshots"
+      |casbah-snapshot-store.mongo-snapshot-url = "mongodb://localhost:$freePort/store.snapshots"
       |casbah-snapshot-store.mongo-snapshot-write-concern = "acknowledged"
       |casbah-snapshot-store.mongo-snapshot-write-concern-timeout = 10000
-    """.stripMargin).withFallback(JournalSpec.config)
+    """.stripMargin)
 }
 
 import CasbahJournalSpec._
-import akka.persistence.mongo.PortServer._
 
-class CasbahJournalSpec extends TestKit(ActorSystem("test", config(freePort)))
-    with JournalSpec
-    with MongoCleanup {
-
+class CasbahJournalSpec extends JournalSpec with MongoCleanup {
+  lazy val config = genConfig
   override val actorSystem = system
 }

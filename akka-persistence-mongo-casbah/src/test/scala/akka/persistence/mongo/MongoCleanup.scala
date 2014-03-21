@@ -3,29 +3,27 @@
  */
 package akka.persistence.mongo
 
-import akka.testkit.TestKit
+import akka.testkit.TestKitBase
 
 import com.mongodb.casbah.Imports._
-
-import java.io.File
-
-import org.apache.commons.io.FileUtils
 
 import org.scalatest.{Suite, BeforeAndAfterAll}
 
 private[mongo] trait MongoCleanup extends EmbeddedMongoSupport
     with BeforeAndAfterAll
     with MongoPersistenceJournalRoot
-    with MongoPersistenceSnapshotRoot { this: TestKit with Suite =>
+    with MongoPersistenceSnapshotRoot { this: TestKitBase with Suite =>
 
   override def configJournal = system.settings.config.getConfig("casbah-journal")
   override def configSnapshot = system.settings.config.getConfig("casbah-snapshot-store")
 
   override def beforeAll(): Unit = {
     embeddedMongoStartup()
+    super.beforeAll()
   }
 
   override def afterAll(): Unit = {
+    super.afterAll()
     val uri = MongoClientURI(configMongoJournalUrl)
     val client = MongoClient(uri)
     val db = client(uri.database.get)

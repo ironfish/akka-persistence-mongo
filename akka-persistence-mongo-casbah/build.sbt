@@ -19,6 +19,9 @@ scalacOptions ++= Common.ScalaCOptions
 
 pomExtra := Common.PomXtra
 
+resolvers += "krasserm at bintray" at "http://dl.bintray.com/krasserm/maven"
+
 libraryDependencies ++= Seq(
-  "org.mongodb"       %% "casbah"                        % "2.6.5"     % "compile"
+  "org.mongodb"         %% "casbah"                        % "2.6.5"     % "compile",
+  "com.github.krasserm" %% "akka-persistence-testkit"      % "0.2"       % "test"
 )
