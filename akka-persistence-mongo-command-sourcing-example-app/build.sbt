@@ -22,7 +22,7 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka"      %% "akka-persistence-experimental" % "2.3.0"          % "compile",
   "com.github.ddevore"     %% "akka-persistence-mongo-casbah" % "0.6-SNAPSHOT"   % "compile",
   "org.scalaz"             %% "scalaz-core"                   % "7.0.5"          % "compile",
-  "com.novus"              %% "salat"                         % "1.9.6-SNAPSHOT" % "compile",
+  "com.novus"              %% "salat"                         % "1.9.6"          % "compile",
   "org.scala-stm"          %% "scala-stm"                     % "0.7"            % "compile",
   "com.typesafe.akka"      %% "akka-slf4j"                    % "2.2.3"          % "compile",
   "com.typesafe.akka"      %% "akka-testkit"                  % "2.3.0"          % "test",
