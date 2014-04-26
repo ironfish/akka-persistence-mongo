@@ -4,6 +4,8 @@ name := "root"
 
 scalaVersion := Common.ScalaVersion
 
+crossScalaVersions := Common.CrossScalaVersions
+
 version := Common.Version
 
 parallelExecution in Test := Common.ParallelExecutionInTest

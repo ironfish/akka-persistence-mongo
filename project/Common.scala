@@ -10,8 +10,9 @@ object Common {
   def NameCasbah = Name + "-casbah"
   def NameCommandSourcingExampleApp = Name + "-command-sourcing-example-app"
   def Organization = "com.github.ddevore"
-  def ScalaVersion = "2.10.3"
-  def Version = "0.6-SNAPSHOT"
+  def ScalaVersion = "2.11.0"
+  def CrossScalaVersions = Seq("2.10.4", "2.11.0")
+  def Version = "0.7-SNAPSHOT"
   def ParallelExecutionInTest = false
   def ScalaCOptions = Seq( "-deprecation", "-unchecked", "-feature", "-language:postfixOps" )
   def TestCompile = "test->test;compile->compile"

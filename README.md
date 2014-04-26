@@ -6,16 +6,11 @@ A replicated [Akka Persistence](http://doc.akka.io/docs/akka/2.3.0/scala/persist
 
 ## Prerequisites
 
-<table border="0">
-  <tr>
-    <td>Akka version: </td>
-    <td>2.3.0 or higher</td>
-  </tr>
-  <tr>
-    <td>Mongo version: </td>
-    <td>2.4.8 or higher</td>
-  </tr>
-</table>
+| Technology | Version                          |
+| :--------: | -------------------------------- |
+| Scala      | 2.10.4, 2.11.0 - Cross Compiled  |
+| Akka       | 2.3.2 or higher                  |
+| Mongo      | 2.4.8 or higher                  |
 
 ## Installation
 
@@ -26,21 +21,31 @@ The mongo journal driver is now available on the Maven Central Snapshot Repo.
     resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots"
 
     libraryDependencies ++= Seq(
-      "com.github.ddevore" %% "akka-persistence-mongo-casbah"  % "0.6-SNAPSHOT" % "compile")
+      "com.github.ddevore" %% "akka-persistence-mongo-casbah"  % "0.7-SNAPSHOT" % "compile")
 
 ### Maven
+
+#### Scala 2.10.4
 
     <dependency>
         <groupId>com.github.ddevore</groupId>
         <artifactId>akka-persistence-mongo-casbah_2.10</artifactId>
-        <version>0.6-SNAPSHOT</version>
+        <version>0.7-SNAPSHOT</version>
+    </dependency>
+
+#### Scala 2.11.0
+
+    <dependency>
+        <groupId>com.github.ddevore</groupId>
+        <artifactId>akka-persistence-mongo-casbah_2.11</artifactId>
+        <version>0.7-SNAPSHOT</version>
     </dependency>
 
 ### Build Locally
 
-Build and install the journal plugin to your local Ivy cache with `sbt publishLocal` (requires sbt 0.13). It can then be included as dependency:
+Build and install the journal plugin to your local Ivy cache with `sbt publishLocal` (requires sbt 0.13.2). It can then be included as dependency:
 
-    libraryDependencies += "com.github.ddevore" %% "akka-persistence-mongo-casbah" % "0.6-SNAPSHOT"
+    libraryDependencies += "com.github.ddevore" %% "akka-persistence-mongo-casbah" % "0.7-SNAPSHOT"
 
 ## Journal Configuration
 
