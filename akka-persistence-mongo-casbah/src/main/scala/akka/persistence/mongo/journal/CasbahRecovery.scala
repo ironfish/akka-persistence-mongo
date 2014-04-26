@@ -37,7 +37,7 @@ trait CasbahRecovery extends AsyncRecovery { this: CasbahJournal ⇒
     } map replayCallback
   }
 
-  override def asyncReadHighestSequenceNr(processorId: String, fromSequenceNr: Long): Future[Long] = future {
+  override def asyncReadHighestSequenceNr(processorId: String, fromSequenceNr: Long): Future[Long] = Future {
     val cursor = collection.find(snrQueryStatement(processorId)).sort(maxSnrSortStatement).limit(1)
     if (cursor.hasNext) cursor.next().getAs[Long](SequenceNrKey).get else 0L
   }

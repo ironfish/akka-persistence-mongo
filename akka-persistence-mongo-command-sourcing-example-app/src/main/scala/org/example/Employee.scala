@@ -48,7 +48,7 @@ trait EmployeeValidations {
 
   def checkStartDate(d: Long): Validation[String, Long] = {
     val dt = new DateTime(d, DateTimeZone.UTC)
-    if (dt.getMillis == dt.toDateMidnight.getMillis) d.success else "StartDateNotOnDayBoundry".failure
+    if (dt.getMillis == dt.withTimeAtStartOfDay.getMillis) d.success else "StartDateNotOnDayBoundry".failure
   }
 
   def checkAndIncrementVersion(l: Long): Validation[String, Long] =
@@ -95,7 +95,7 @@ case class ActiveEmployee private (
 
   def leaveOfAbsence: DomainValidation[InactiveEmployee] =
     InactiveEmployee.create(this)
-  
+
   def terminate(terminationDate: Long, terminationReason: String): DomainValidation[Termination] =
     Termination.create(this, terminationDate, terminationReason)
 }
@@ -362,8 +362,8 @@ class EmployeeProcessor(ref: Ref[Map[String, Employee]], eventChannel: ActorRef,
       onSuccess(employee)
     }
     sender ! validation
-  }  
-  
+  }
+
   def updateEmployee[B <: Employee](id: String, expectedVersion: Long)(f: Employee ⇒ DomainValidation[B]): DomainValidation[B] =
     readEmployees.get(id) match {
       case Some(emp) ⇒ for {
@@ -411,17 +411,17 @@ class EmployeeProcessor(ref: Ref[Map[String, Employee]], eventChannel: ActorRef,
 class EmployeeService(ref: Ref[Map[String, Employee]], processor: ActorRef)(implicit system: ActorSystem) {
 
   import system.dispatcher
-  
+
   implicit val timeout = Timeout(5 seconds)
 
   def sendCommand(cmd: EmployeeCommand): Future[DomainValidation[Employee]] = processor ? Persistent(cmd) map (_.asInstanceOf[DomainValidation[Employee]])
- 
+
   def getMap = ref.single.get
 
   def get(id: String): Option[Employee] = getMap.get(id)
 
   def getAll: Iterable[Employee] = getMap.values
-  
+
   def getAllActive = getAll.filter(_.isInstanceOf[ActiveEmployee])
 
   def getAllInactive = getAll.filter(_.isInstanceOf[InactiveEmployee])
