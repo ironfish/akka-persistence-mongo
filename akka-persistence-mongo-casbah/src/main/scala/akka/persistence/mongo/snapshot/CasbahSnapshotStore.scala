@@ -55,19 +55,19 @@ private[persistence] class CasbahSnapshotStore  extends SnapshotStore
       val snaps = collection.find(snapshotsQueryStatement(processorId, criteria))
         .sort(snapshotsSortStatement)
         .limit(configMongoSnapshotLoadAttempts)
-      // Could have used Seq.collectFirst but it's vital to log failed snapshot recovery.
       load(snaps.to[immutable.Seq])
     }
   }
 
-  private def load(snaps: immutable.Seq[DBObject]): Option[SelectedSnapshot] = snaps.lastOption match {
+  @scala.annotation.tailrec
+  private def load(snaps: immutable.Seq[DBObject]): Option[SelectedSnapshot] = snaps.headOption match {
     case None => None
     case Some(snap) =>
       Try(fromBytes[SelectedSnapshot](snap.as[Array[Byte]](SnapshotKey))) match {
         case Success(s) => Some(s)
         case Failure(e) =>
           log.error(e, s"error loading snapshot $snap")
-          load(snaps.init)
+          load(snaps.tail)
       }
   }
 }

@@ -10,7 +10,7 @@ import akka.persistence.mongo.MongoPersistenceSnapshotRoot
 import com.mongodb.casbah.Imports._
 
 private[mongo] trait CasbahSnapshotHelper extends MongoPersistenceSnapshotRoot {
-  
+
   val ProcessorIdKey = "processorId"
   val SequenceNrKey = "sequenceNr"
   val TimestampKey = "timestamp"
@@ -30,7 +30,7 @@ private[mongo] trait CasbahSnapshotHelper extends MongoPersistenceSnapshotRoot {
   val collection = db(uri.collection.get)
 
   collection.ensureIndex(snapIdx1, snapIdx1Options)
-  
+
   def writeJSON(snapshot: SelectedSnapshot) = {
     val builder = MongoDBObject.newBuilder
     builder += ProcessorIdKey -> snapshot.metadata.processorId
