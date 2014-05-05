@@ -1,10 +1,10 @@
 organization := Common.Organization
 
-name := Common.NameCommandSourcingExampleApp
+name := Common.NameEventSourcingExampleApp
 
 scalaVersion := Common.ScalaVersion
 
-version := "0.2-SNAPSHOT"
+version := "0.1-SNAPSHOT"
 
 parallelExecution in Test := Common.ParallelExecutionInTest
 

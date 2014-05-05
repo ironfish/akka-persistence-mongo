@@ -20,7 +20,8 @@ publishArtifact := false
 
 lazy val root = (
   project in file(".")
-    aggregate(akkaPersistenceMongoCommon, akkaPersistenceMongoCasbah, akkaPersistenceMongoCommandSourcingExampleApp)
+    aggregate(akkaPersistenceMongoCommon, akkaPersistenceMongoCasbah,
+      akkaPersistenceMongoCommandSourcingExampleApp, akkaPersistenceMongoEventSourcingExampleApp)
   )
 
 lazy val akkaPersistenceMongoCommon =
@@ -33,3 +34,6 @@ lazy val akkaPersistenceMongoCasbah = (
 
 lazy val akkaPersistenceMongoCommandSourcingExampleApp =
   project in file(Common.NameCommandSourcingExampleApp)
+
+lazy val akkaPersistenceMongoEventSourcingExampleApp =
+  project in file(Common.NameEventSourcingExampleApp)
