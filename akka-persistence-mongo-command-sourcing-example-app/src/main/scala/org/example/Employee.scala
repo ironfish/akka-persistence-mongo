@@ -382,11 +382,9 @@ class EmployeeProcessor(ref: Ref[Map[String, Employee]], eventChannel: ActorRef,
     }
 
   def updateInactive[B <: Employee](id: String, version: Long)(f: InactiveEmployee ⇒ DomainValidation[B]): DomainValidation[B] =
-    updateEmployee(id, version) { e ⇒
-      e match {
-        case emp: InactiveEmployee  ⇒ f(emp)
-        case emp: Employee ⇒ "EmployeeNotInactive".failNel
-      }
+    updateEmployee(id, version) {
+      case emp: InactiveEmployee ⇒ f(emp)
+      case emp: Employee ⇒ "EmployeeNotInactive".failNel
     }
 
   def updateTermination[B <: Employee](id: String, version: Long)(f: Termination ⇒ DomainValidation[B]): DomainValidation[B] =
