@@ -26,6 +26,10 @@ final case class ChangeEmployeeStartDate(id: String, expectedVersion: Long, star
 final case class ChangeEmployeeDept(id: String, expectedVersion: Long, dept: String) extends EmployeeCommand
 final case class ChangeEmployeeTitle(id: String, expectedVersion: Long, title: String) extends EmployeeCommand
 final case class ChangeEmployeeSalary(id: String, expectedVersion: Long, salary: BigDecimal) extends EmployeeCommand
+final case class DeactivateEmployee(id: String, expectedVersion: Long, deactivateDate: Long) extends EmployeeCommand
+final case class ActivateEmployee(id: String, expectedVersion: Long, activateDate: Long) extends EmployeeCommand
+final case class TerminateEmployee(id: String, expectedVersion: Long, termDate: Long, termReason: String) extends EmployeeCommand
+final case class RehireEmployee(id: String, expectedVersion: Long, rehireDate: Long) extends EmployeeCommand
 
 /**
  * These are the resulting events from commands performed by an employee if the commands were not rejected. They will be journaled
@@ -46,19 +50,19 @@ final case class EmployeeStartDateChanged(id: String, version: Long, startDate: 
 final case class EmployeeDeptChanged(id: String, version: Long, dept: String) extends EmployeeEvent
 final case class EmployeeTitleChanged(id: String, version: Long, title: String) extends EmployeeEvent
 final case class EmployeeSalaryChanged(id: String, version: Long, salary: BigDecimal) extends EmployeeEvent
+final case class EmployeeDeactivated(id: String, version: Long, deactivateDate: Long) extends EmployeeEvent
+final case class EmployeeActivated(id: String, version: Long, activateDate: Long) extends EmployeeEvent
+final case class EmployeeTerminated(id: String, version: Long, termDate: Long, termReason: String)
+final case class EmployeeRehired(id: String, version: Long, rehireDate: Long) extends EmployeeEvent
 
 case object SnapshotEmployees
 
-case object EmployeeExists extends ValidationKey
 case object IdRequired extends ValidationKey
-case object ExpectedVersionMismatch extends ValidationKey
-case object VersionInvalid extends ValidationKey
 case object LastNameRequired extends ValidationKey
 case object FirstNameRequired extends ValidationKey
-case object StartDateNotOnDayBoundary extends ValidationKey
 case object DepartmentRequired extends ValidationKey
 case object TitleRequired extends ValidationKey
-case object InvalidSalary extends ValidationKey
+case object TerminationReasonRequired extends ValidationKey
 
 /**
 * An employee domain aggregate to be extended by NewHire, Termination, etc.
@@ -86,18 +90,25 @@ object Employee {
 }
 
 trait EmployeeValidations {
-  def checkAndIncrementVersion(l: Long): Validation[String, Long] =
-    if (l < -1) VersionInvalid.failure else (l + 1).success
-
   def checkStartDate(d: Long): Validation[String, Long] = {
     val dt = new DateTime(d, DateTimeZone.UTC)
-    if (dt.getMillis != dt.withTimeAtStartOfDay.getMillis) StartDateNotOnDayBoundary.failure else d.success
+    if (dt.getMillis != dt.withTimeAtStartOfDay.getMillis) s"start date $d must be start of day boundary".failure else d.success
   }
 
-  def checkSalary(s: BigDecimal): Validation[String, BigDecimal] = {
-    val OneMillionDollars = BigDecimal(1000000)
-    if (s < 0 || s > OneMillionDollars) InvalidSalary.failure else s.success
-  }
+  def checkSalary(s: BigDecimal): Validation[String, BigDecimal] =
+    if (s < 0 || s > BigDecimal(1000000)) s"salary $s must be between 0 and 1000000.00".failure else s.success
+
+  def checkDeactivateDate(dd: Long, sd: Long): Validation[String, Long] =
+    if (dd <= sd) s"deactivate date $dd must be greater than start date $sd".failure else dd.success
+
+  def checkActivateDate(sd: Long, dd: Long): Validation[String, Long] =
+    if (sd <= dd) s"activate date $sd must be greater than deactivate date $dd".failure else sd.success
+
+  def checkTerminationDate(td: Long, sd: Long): Validation[String, Long] =
+    if (td <= sd) s"termination date $td must be greater than start date $sd".failure else td.success
+
+  def checkRehireDate(rd: Long, td: Long): Validation[String, Long] =
+    if (rd <= td) s"rehire date $td must be greater than termination date $td".failure else rd.success
 }
 
 /**
@@ -137,6 +148,19 @@ case class ActiveEmployee (
 
   def withSalary(salary: BigDecimal): DomainValidation[ActiveEmployee] =
     checkSalary(salary) fold (f => f.failNel, s => copy(version = version + 1, salary = s).success)
+
+  def deactivate(deactivateDate: Long): DomainValidation[InactiveEmployee] =
+    checkDeactivateDate(deactivateDate, this.startDate) fold (
+      f => f.failNel,
+      s => InactiveEmployee(this.id, this.version + 1, this.lastName, this.firstName, this.address, this.startDate, this.dept,
+        this.title, this.salary, s).success)
+
+  def terminate(termDate: Long, termReason: String): DomainValidation[TerminatedEmployee] =
+    (checkTerminationDate(termDate, this.startDate).toValidationNel |@|
+      checkString(termReason, TerminationReasonRequired).toValidationNel) {(td, tr) =>
+      TerminatedEmployee(this.id, this.version + 1, this.lastName, this.firstName, this.address, this.startDate, this.dept,
+        this.title, this.salary, td, tr)
+    }
 }
 
 object ActiveEmployee extends EmployeeValidations {
@@ -144,7 +168,7 @@ object ActiveEmployee extends EmployeeValidations {
 
     def validate(cmd: HireEmployee): DomainValidation[ActiveEmployee] =
     (checkString(cmd.id, IdRequired).toValidationNel |@|
-      checkAndIncrementVersion(cmd.expectedVersion).toValidationNel |@|
+      0L.successNel |@|
       checkString(cmd.lastName, LastNameRequired).toValidationNel |@|
       checkString(cmd.firstName, FirstNameRequired).toValidationNel |@|
       Address.validate(cmd.street, cmd.city, cmd.stateOrProvince, cmd.country, cmd.postalCode) |@|
@@ -156,11 +180,52 @@ object ActiveEmployee extends EmployeeValidations {
   }
 }
 
+case class InactiveEmployee (
+  id: String,
+  version: Long,
+  lastName: String,
+  firstName: String,
+  address: Address,
+  startDate: Long,
+  dept: String,
+  title: String,
+  salary: BigDecimal,
+  deactivateDate: Long) extends Employee with EmployeeValidations {
+
+  def activate(startDate: Long): DomainValidation[ActiveEmployee] =
+    (checkStartDate(startDate).toValidationNel |@|
+      checkActivateDate(startDate, this.deactivateDate).toValidationNel) {(s1, s2) =>
+      ActiveEmployee(this.id, version = this.version + 1, this.lastName, this.firstName, this.address, s2, this.dept, this.title,
+        this.salary)
+    }
+}
+
+case class TerminatedEmployee (
+  id: String,
+  version: Long,
+  lastName: String,
+  firstName: String,
+  address: Address,
+  startDate: Long,
+  dept: String,
+  title: String,
+  salary: BigDecimal,
+  termDate: Long,
+  termReason: String) extends Employee with EmployeeValidations {
+
+    def rehire(rehireDate: Long): DomainValidation[ActiveEmployee] =
+      checkRehireDate(rehireDate, this.termDate) fold (
+        f => f.failNel,
+        s => ActiveEmployee(this.id, version = this.version + 1, this.lastName, this.firstName, this.address, rehireDate,
+          this.dept, this.title, this.salary).success)
+}
+
 final case class EmployeeState(employees: Map[String, Employee] = Map.empty) {
   def update(e: Employee) = copy(employees = employees + (e.id -> e))
   def get(id: String) = employees.get(id)
-  def getActive(id: String) = get(id).map(_.asInstanceOf[ActiveEmployee])
-//  def getActive(id: String) = employees.get(id).get.asInstanceOf[ActiveEmployee]
+  def getActive(id: String) = get(id) map (_.asInstanceOf[ActiveEmployee])
+  def getInactive(id: String) = get(id) map (_.asInstanceOf[InactiveEmployee])
+  def getTerminated(id: String) = get(id) map (_.asInstanceOf[TerminatedEmployee])
 }
 
 class EmployeeProcessor extends EventsourcedProcessor {
@@ -193,6 +258,18 @@ class EmployeeProcessor extends EventsourcedProcessor {
       updateState(state.getActive(evt.id).get.copy(version = evt.version, title = evt.title))
     case evt: EmployeeSalaryChanged =>
       updateState(state.getActive(evt.id).get.copy(version = evt.version, salary = evt.salary))
+    case evt: EmployeeDeactivated =>
+      updateState(state.getActive(evt.id).map(e => InactiveEmployee(e.id, evt.version, e.lastName, e.firstName, e.address,
+        e.startDate, e.dept, e.title, e.salary, evt.deactivateDate)).get)
+    case evt: EmployeeActivated =>
+      updateState(state.getInactive(evt.id).map(e => ActiveEmployee(e.id, evt.version, e.lastName, e.firstName, e.address,
+        evt.activateDate, e.dept, e.title, e.salary)).get)
+    case evt: EmployeeTerminated =>
+      updateState(state.getActive(evt.id).map(e => TerminatedEmployee(e.id, evt.version, e.lastName, e.firstName, e.address,
+      e.startDate, e.dept, e.title, e.salary, evt.termDate, evt.termReason)).get)
+    case evt: EmployeeRehired =>
+      updateState(state.getTerminated(evt.id).map(e => ActiveEmployee(e.id, evt.version, e.lastName, e.firstName, e.address,
+        evt.rehireDate, e.dept, e.title, e.salary)).get)
     case SnapshotOffer(_, snapshot: EmployeeState) => state = snapshot
   }
 
@@ -251,36 +328,72 @@ class EmployeeProcessor extends EventsourcedProcessor {
         updateState(s)
         context.system.eventStream.publish(event)
       })
+    case cmd: DeactivateEmployee => deactivate(cmd) fold (
+      f => println(s"error $f occurred on $cmd"), // todo send back to sender
+      s => persist(EmployeeDeactivated(s.id, s.version, s.deactivateDate)) { event =>
+       updateState(s)
+       context.system.eventStream.publish(event)
+      })
+    case cmd: ActivateEmployee => activate(cmd) fold (
+      f => println(s"error $f occurred on $cmd"), // todo send back to sender
+      s => persist(EmployeeActivated(s.id, s.version, s.startDate)) { event =>
+        updateState(s)
+        context.system.eventStream.publish(event)
+      })
+    case cmd: TerminateEmployee => terminate(cmd) fold (
+      f => println(s"error $f occurred on $cmd"), // todo send back to sender
+      s => persist(EmployeeTerminated(s.id, s.version, s.termDate, s.termReason)) { event =>
+        updateState(s)
+        context.system.eventStream.publish(event)
+      })
+    case cmd: RehireEmployee => rehire(cmd) fold (
+      f => println(s"error $f occurred on $cmd"), // todo send back to sender
+      s => persist(EmployeeRehired(s.id, s.version, s.startDate)) { event =>
+        updateState(s)
+        context.system.eventStream.publish(event)
+      })
     case SnapshotEmployees  => saveSnapshot(state)
     case "print"            => println("STATE: " + state)
   }
 
   def hire(cmd: HireEmployee): DomainValidation[ActiveEmployee] =
     state.get(cmd.id) match {
-      case Some(emp) => EmployeeExists.failNel
+      case Some(emp) => s"employee for $cmd already exists".failNel
       case None      => ActiveEmployee.validate(cmd)
     }
 
   def changeLastName(cmd: ChangeEmployeeLastName): DomainValidation[ActiveEmployee] =
-    updateActive(cmd) { ae => ae.withLastName(cmd.lastName) }
+    updateActive(cmd) { e => e.withLastName(cmd.lastName) }
 
   def changeFirstName(cmd: ChangeEmployeeFirstName): DomainValidation[ActiveEmployee] =
-    updateActive(cmd) { ae => ae.withFirstName(cmd.firstName) }
+    updateActive(cmd) { e => e.withFirstName(cmd.firstName) }
 
   def changeAddress(cmd: ChangeEmployeeAddress): DomainValidation[ActiveEmployee] =
-    updateActive(cmd) { ae => ae.withAddress(cmd.street, cmd.city, cmd.stateOrProvince, cmd.country, cmd.postalCode) }
+    updateActive(cmd) { e => e.withAddress(cmd.street, cmd.city, cmd.stateOrProvince, cmd.country, cmd.postalCode) }
 
   def changeStartDate(cmd: ChangeEmployeeStartDate): DomainValidation[ActiveEmployee] =
-    updateActive(cmd) { ae => ae.withStartDate(cmd.startDate) }
+    updateActive(cmd) { e => e.withStartDate(cmd.startDate) }
 
   def changeDept(cmd: ChangeEmployeeDept): DomainValidation[ActiveEmployee] =
-    updateActive(cmd) { ae => ae.withDept(cmd.dept) }
+    updateActive(cmd) { e => e.withDept(cmd.dept) }
 
   def changeTitle(cmd: ChangeEmployeeTitle): DomainValidation[ActiveEmployee] =
-    updateActive(cmd) { ae => ae.withTitle(cmd.title) }
+    updateActive(cmd) { e => e.withTitle(cmd.title) }
 
   def changeSalary(cmd: ChangeEmployeeSalary): DomainValidation[ActiveEmployee] =
-    updateActive(cmd) { ae => ae.withSalary(cmd.salary) }
+    updateActive(cmd) { e => e.withSalary(cmd.salary) }
+
+  def deactivate(cmd: DeactivateEmployee): DomainValidation[InactiveEmployee] =
+    updateActive(cmd) { e => e.deactivate(cmd.deactivateDate) }
+
+  def activate(cmd: ActivateEmployee): DomainValidation[ActiveEmployee] =
+    updateInactive(cmd) { e => e.activate(cmd.activateDate) }
+
+  def terminate(cmd: TerminateEmployee): DomainValidation[TerminatedEmployee] =
+    updateActive(cmd) { e => e.terminate(cmd.termDate, cmd.termReason) }
+
+  def rehire(cmd: RehireEmployee): DomainValidation[ActiveEmployee] =
+    updateTerminated(cmd) { e => e.rehire(cmd.rehireDate) }
 
   def updateEmployee[A <: Employee](cmd: EmployeeCommand)(fn: Employee => DomainValidation[A]): DomainValidation[A] =
     state.get(cmd.id) match {
@@ -293,6 +406,18 @@ class EmployeeProcessor extends EventsourcedProcessor {
       case emp: ActiveEmployee => fn(emp)
       case emp                 => s"$emp for $cmd is not active".failNel
     }
+
+  def updateInactive[A <: Employee](cmd: EmployeeCommand)(fn: InactiveEmployee => DomainValidation[A]): DomainValidation[A] =
+    updateEmployee(cmd) {
+      case emp: InactiveEmployee => fn(emp)
+      case emp                   => s"$emp for $cmd is not inactive".failNel
+    }
+
+  def updateTerminated[A <: Employee](cmd: EmployeeCommand)(fn: TerminatedEmployee => DomainValidation[A]): DomainValidation[A] =
+    updateEmployee(cmd) {
+      case emp: TerminatedEmployee => fn(emp)
+      case emp                     => s"$emp for $cmd is not terminated".failNel
+    }
 }
 
 object EmployeeProcessorExample extends App {
@@ -302,29 +427,51 @@ object EmployeeProcessorExample extends App {
 
   processor ! "print"
 
-  processor ! HireEmployee("1", -1l, "Devore", "duncan", "946 Henning Road", "Perkiomenville", "PA", "18074", "USA", 1393632000000L,
+  processor ! HireEmployee("1", -1l, "Devore", "duncan", "123 Big Road", "Perkiomenville", "PA", "18074", "USA", 1393632000000L,
     "Technology", "The Total Package", BigDecimal(300000))
-
-  processor ! HireEmployee("2", -1l, "Sean", "Walsh", "14 Rosalie Ave.", "Rumson", "NJ", "07760", "USA", 1399150441L,
-    "Technology", "The Brain", BigDecimal(300000))
 
   processor ! "print"
 
   processor ! ChangeEmployeeLastName("1", 0, "DeVore")
 
-  processor ! SnapshotEmployees
+  processor ! "print"
 
-  processor ! ChangeEmployeeLastName("3", 0, "Smith")
+  processor ! SnapshotEmployees
 
   processor ! ChangeEmployeeFirstName("1", 1, "Duncan")
 
-  processor ! HireEmployee("2", -1l, "Sean", "Walsh", "14 Rosalie Ave.", "Rumson", "NJ", "07760", "USA", 1393632000000L,
-    "Technology", "The Brain", BigDecimal(300000))
+  processor ! "print"
 
-  processor ! ChangeEmployeeFirstName("3", 0, "Smith")
+//  processor ! HireEmployee("2", -1l, "Sean", "Walsh", "321 Large Ave.", "Rumson", "NJ", "07760", "USA", 1399150441L,
+//    "Technology", "The Brain", BigDecimal(300000))
+
+  processor ! HireEmployee("2", -1l, "Sean", "Walsh", "321 Large Ave.", "Rumson", "NJ", "07760", "USA", 1393632000000L,
+    "Technology", "The Brain", BigDecimal(300000))
 
   processor ! "print"
 
-  Thread.sleep(1000)
+  processor ! DeactivateEmployee("2", 0, 1396750647000L)
+
+  processor ! "print"
+
+//  processor ! ActivateEmployee("2", 1, 1399342647000L)
+
+  processor ! ActivateEmployee("2", 1, 1397088000000L)
+
+  processor ! "print"
+
+  processor ! TerminateEmployee("2", 2, 1399334400000L, "tired of working here")
+
+  processor ! "print"
+
+  processor ! RehireEmployee("2", 3, 1399420800000L)
+
+  processor ! "print"
+
+//  processor ! ChangeEmployeeLastName("3", 0, "Smith")
+//
+//  processor ! ChangeEmployeeFirstName("3", 0, "Smith")
+
+  Thread.sleep(2000)
   system.shutdown()
 }

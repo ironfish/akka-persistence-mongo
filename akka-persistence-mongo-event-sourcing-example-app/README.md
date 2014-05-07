@@ -15,10 +15,10 @@ Home for Reactive application using the following stack:
 
 - Initial commit with base functionality.
 - Add State changes:
-    - Deactive
-    - Activate
-    - Terminate
-    - Rehire
+    - ~~Deactive~~
+    - ~~Activate~~
+    - ~~Terminate~~
+    - ~~Rehire~~
 - Add Run Payroll
 - Implement CQRS query side w/ views.
 
