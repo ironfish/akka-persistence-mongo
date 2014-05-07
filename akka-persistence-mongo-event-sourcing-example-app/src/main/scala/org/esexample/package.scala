@@ -15,12 +15,6 @@ package object esexample {
     def failure = this.toString.fail
   }
 
-  case object StreetRequired extends ValidationKey
-  case object CityRequired extends ValidationKey
-  case object StateOrProvinceRequired extends ValidationKey
-  case object CountryRequired extends ValidationKey
-  case object PostalCodeRequired extends ValidationKey
-
   object CommonValidations {
     /**
      * Validates that a string is not null and non empty
@@ -53,6 +47,13 @@ package object esexample {
 
   object Address {
     import CommonValidations._
+
+    case object StreetRequired extends ValidationKey
+    case object CityRequired extends ValidationKey
+    case object StateOrProvinceRequired extends ValidationKey
+    case object CountryRequired extends ValidationKey
+    case object PostalCodeRequired extends ValidationKey
+
     def validate(street: String, city: String, stateOrProvince: String, country: String, postalCode: String):
         ValidationNel[String, Address] =
       (checkString(street, StreetRequired).toValidationNel |@|
