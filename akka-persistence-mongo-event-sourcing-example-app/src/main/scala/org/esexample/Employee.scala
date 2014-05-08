@@ -30,6 +30,7 @@ final case class DeactivateEmployee(id: String, expectedVersion: Long, deactivat
 final case class ActivateEmployee(id: String, expectedVersion: Long, activateDate: Long) extends EmployeeCommand
 final case class TerminateEmployee(id: String, expectedVersion: Long, termDate: Long, termReason: String) extends EmployeeCommand
 final case class RehireEmployee(id: String, expectedVersion: Long, rehireDate: Long) extends EmployeeCommand
+final case class PayEmployee(id: String, expectedVersion: Long, amount: BigDecimal) extends EmployeeCommand
 
 /**
  * These are the resulting events from commands performed by an employee if the commands were not rejected. They will be journaled
@@ -54,7 +55,9 @@ final case class EmployeeDeactivated(id: String, version: Long, deactivateDate: 
 final case class EmployeeActivated(id: String, version: Long, activateDate: Long) extends EmployeeEvent
 final case class EmployeeTerminated(id: String, version: Long, termDate: Long, termReason: String)
 final case class EmployeeRehired(id: String, version: Long, rehireDate: Long) extends EmployeeEvent
+final case class EmployeePaid(id: String, version: Long, amount: BigDecimal) extends EmployeeEvent
 
+case object RunPayroll
 case object SnapshotEmployees
 
 case object IdRequired extends ValidationKey
@@ -77,6 +80,7 @@ sealed trait Employee {
   def dept: String
   def title: String
   def salary: BigDecimal
+  def salaryOwed: BigDecimal
 }
 
 /**
@@ -109,6 +113,9 @@ trait EmployeeValidations {
 
   def checkRehireDate(rd: Long, td: Long): Validation[String, Long] =
     if (rd <= td) s"rehire date $td must be greater than termination date $td".failure else rd.success
+
+  def checkPay(p: BigDecimal, so: BigDecimal): Validation[String, BigDecimal] =
+    if(so - p < BigDecimal(0)) s"payment $p cannot be greater than salary owed $so".failure else p.success
 }
 
 /**
@@ -123,7 +130,8 @@ case class ActiveEmployee (
   startDate: Long,
   dept: String,
   title: String,
-  salary: BigDecimal) extends Employee with EmployeeValidations {
+  salary: BigDecimal,
+  salaryOwed: BigDecimal) extends Employee with EmployeeValidations {
   import CommonValidations._
 
   def withLastName(lastName: String): DomainValidation[ActiveEmployee] =
@@ -153,20 +161,23 @@ case class ActiveEmployee (
     checkDeactivateDate(deactivateDate, this.startDate) fold (
       f => f.failNel,
       s => InactiveEmployee(this.id, this.version + 1, this.lastName, this.firstName, this.address, this.startDate, this.dept,
-        this.title, this.salary, s).success)
+        this.title, this.salary, this.salaryOwed, s).success)
 
   def terminate(termDate: Long, termReason: String): DomainValidation[TerminatedEmployee] =
     (checkTerminationDate(termDate, this.startDate).toValidationNel |@|
-      checkString(termReason, TerminationReasonRequired).toValidationNel) {(td, tr) =>
+      checkString(termReason, TerminationReasonRequired).toValidationNel) { (td, tr) =>
       TerminatedEmployee(this.id, this.version + 1, this.lastName, this.firstName, this.address, this.startDate, this.dept,
-        this.title, this.salary, td, tr)
+        this.title, this.salary, this.salaryOwed, td, tr)
     }
+
+  def pay(p: BigDecimal): DomainValidation[ActiveEmployee] =
+    checkPay(p, this.salaryOwed) fold (f => f.failNel, s => copy(version = version + 1, salaryOwed = salaryOwed - p).success)
 }
 
 object ActiveEmployee extends EmployeeValidations {
   import CommonValidations._
 
-    def validate(cmd: HireEmployee): DomainValidation[ActiveEmployee] =
+    def hire(cmd: HireEmployee): DomainValidation[ActiveEmployee] =
     (checkString(cmd.id, IdRequired).toValidationNel |@|
       0L.successNel |@|
       checkString(cmd.lastName, LastNameRequired).toValidationNel |@|
@@ -175,9 +186,8 @@ object ActiveEmployee extends EmployeeValidations {
       checkStartDate(cmd.startDate).toValidationNel |@|
       checkString(cmd.dept, DepartmentRequired).toValidationNel |@|
       checkString(cmd.title, TitleRequired).toValidationNel |@|
-      checkSalary(cmd.salary).toValidationNel) {
-    ActiveEmployee(_, _, _, _, _, _, _, _, _)
-  }
+      checkSalary(cmd.salary).toValidationNel) { (id, v, ln, fn, a, sd, d, t, s) =>
+        ActiveEmployee(id, v, ln, fn, a, sd, d, t, s, s) }
 }
 
 case class InactiveEmployee (
@@ -190,13 +200,14 @@ case class InactiveEmployee (
   dept: String,
   title: String,
   salary: BigDecimal,
+  salaryOwed: BigDecimal,
   deactivateDate: Long) extends Employee with EmployeeValidations {
 
   def activate(startDate: Long): DomainValidation[ActiveEmployee] =
     (checkStartDate(startDate).toValidationNel |@|
       checkActivateDate(startDate, this.deactivateDate).toValidationNel) {(s1, s2) =>
       ActiveEmployee(this.id, version = this.version + 1, this.lastName, this.firstName, this.address, s2, this.dept, this.title,
-        this.salary)
+        this.salary, this.salaryOwed)
     }
 }
 
@@ -210,6 +221,7 @@ case class TerminatedEmployee (
   dept: String,
   title: String,
   salary: BigDecimal,
+  salaryOwed: BigDecimal,
   termDate: Long,
   termReason: String) extends Employee with EmployeeValidations {
 
@@ -217,13 +229,14 @@ case class TerminatedEmployee (
       checkRehireDate(rehireDate, this.termDate) fold (
         f => f.failNel,
         s => ActiveEmployee(this.id, version = this.version + 1, this.lastName, this.firstName, this.address, rehireDate,
-          this.dept, this.title, this.salary).success)
+          this.dept, this.title, this.salary, this.salaryOwed).success)
 }
 
 final case class EmployeeState(employees: Map[String, Employee] = Map.empty) {
   def update(e: Employee) = copy(employees = employees + (e.id -> e))
   def get(id: String) = employees.get(id)
   def getActive(id: String) = get(id) map (_.asInstanceOf[ActiveEmployee])
+  def getActiveAll = employees map (_._2.asInstanceOf[ActiveEmployee])
   def getInactive(id: String) = get(id) map (_.asInstanceOf[InactiveEmployee])
   def getTerminated(id: String) = get(id) map (_.asInstanceOf[TerminatedEmployee])
 }
@@ -242,7 +255,7 @@ class EmployeeProcessor extends EventsourcedProcessor {
   val receiveRecover: Receive = {
     case evt: EmployeeHired =>
       updateState(ActiveEmployee(evt.id, evt.version, evt.lastName, evt.firstName, Address(evt.street,
-        evt.city, evt.stateOrProvince, evt.country, evt.postalCode), evt.startDate, evt.dept, evt.title, evt.salary))
+        evt.city, evt.stateOrProvince, evt.country, evt.postalCode), evt.startDate, evt.dept, evt.title, evt.salary, evt.salary))
     case evt: EmployeeLastNameChanged =>
       updateState(state.getActive(evt.id).get.copy(version = evt.version, lastName = evt.lastName))
     case evt: EmployeeFirstNameChanged =>
@@ -260,16 +273,18 @@ class EmployeeProcessor extends EventsourcedProcessor {
       updateState(state.getActive(evt.id).get.copy(version = evt.version, salary = evt.salary))
     case evt: EmployeeDeactivated =>
       updateState(state.getActive(evt.id).map(e => InactiveEmployee(e.id, evt.version, e.lastName, e.firstName, e.address,
-        e.startDate, e.dept, e.title, e.salary, evt.deactivateDate)).get)
+        e.startDate, e.dept, e.title, e.salary, e.salaryOwed, evt.deactivateDate)).get)
     case evt: EmployeeActivated =>
       updateState(state.getInactive(evt.id).map(e => ActiveEmployee(e.id, evt.version, e.lastName, e.firstName, e.address,
-        evt.activateDate, e.dept, e.title, e.salary)).get)
+        evt.activateDate, e.dept, e.title, e.salary, e.salaryOwed)).get)
     case evt: EmployeeTerminated =>
       updateState(state.getActive(evt.id).map(e => TerminatedEmployee(e.id, evt.version, e.lastName, e.firstName, e.address,
-      e.startDate, e.dept, e.title, e.salary, evt.termDate, evt.termReason)).get)
+      e.startDate, e.dept, e.title, e.salary, e.salaryOwed, evt.termDate, evt.termReason)).get)
     case evt: EmployeeRehired =>
       updateState(state.getTerminated(evt.id).map(e => ActiveEmployee(e.id, evt.version, e.lastName, e.firstName, e.address,
-        evt.rehireDate, e.dept, e.title, e.salary)).get)
+        evt.rehireDate, e.dept, e.title, e.salary, e.salaryOwed)).get)
+    case evt: EmployeePaid =>
+      updateState(state.getActive(evt.id).map(e => e.copy(version = evt.version, salaryOwed = e.salaryOwed - evt.amount)).get)
     case SnapshotOffer(_, snapshot: EmployeeState) => state = snapshot
   }
 
@@ -352,6 +367,14 @@ class EmployeeProcessor extends EventsourcedProcessor {
         updateState(s)
         context.system.eventStream.publish(event)
       })
+    case RunPayroll => state.getActiveAll map { e =>
+      val cmd = PayEmployee(e.id, e.version, BigDecimal(5000))
+      pay(cmd) fold(
+        f => println(s"error $f occurred on $cmd"), // todo send back to sender
+        s => persist(EmployeePaid(s.id, s.version, cmd.amount)) { event =>
+          updateState(s)
+          context.system.eventStream.publish(event)
+        })}
     case SnapshotEmployees  => saveSnapshot(state)
     case "print"            => println("STATE: " + state)
   }
@@ -359,7 +382,7 @@ class EmployeeProcessor extends EventsourcedProcessor {
   def hire(cmd: HireEmployee): DomainValidation[ActiveEmployee] =
     state.get(cmd.id) match {
       case Some(emp) => s"employee for $cmd already exists".failNel
-      case None      => ActiveEmployee.validate(cmd)
+      case None      => ActiveEmployee.hire(cmd)
     }
 
   def changeLastName(cmd: ChangeEmployeeLastName): DomainValidation[ActiveEmployee] =
@@ -394,6 +417,9 @@ class EmployeeProcessor extends EventsourcedProcessor {
 
   def rehire(cmd: RehireEmployee): DomainValidation[ActiveEmployee] =
     updateTerminated(cmd) { e => e.rehire(cmd.rehireDate) }
+
+  def pay(cmd: PayEmployee): DomainValidation[ActiveEmployee] =
+    updateActive(cmd) { e => e.pay(cmd.amount) }
 
   def updateEmployee[A <: Employee](cmd: EmployeeCommand)(fn: Employee => DomainValidation[A]): DomainValidation[A] =
     state.get(cmd.id) match {
@@ -465,6 +491,10 @@ object EmployeeProcessorExample extends App {
   processor ! "print"
 
   processor ! RehireEmployee("2", 3, 1399420800000L)
+
+  processor ! "print"
+
+  processor ! RunPayroll
 
   processor ! "print"
 
