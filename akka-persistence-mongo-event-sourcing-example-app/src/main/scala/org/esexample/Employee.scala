@@ -1,6 +1,5 @@
 package org.esexample
 
-import akka.actor.{Props, ActorSystem}
 import akka.persistence.{SnapshotOffer, EventsourcedProcessor}
 
 import org.joda.time.{DateTimeZone, DateTime}
@@ -56,6 +55,8 @@ final case class EmployeeActivated(id: String, version: Long, activateDate: Long
 final case class EmployeeTerminated(id: String, version: Long, termDate: Long, termReason: String)
 final case class EmployeeRehired(id: String, version: Long, rehireDate: Long) extends EmployeeEvent
 final case class EmployeePaid(id: String, version: Long, amount: BigDecimal) extends EmployeeEvent
+
+final case class ErrorMessage(data: String)
 
 case object RunPayroll
 case object SnapshotEmployees
@@ -294,75 +295,75 @@ class EmployeeProcessor extends EventsourcedProcessor {
    */
   val receiveCommand: Receive = {
     case cmd: HireEmployee => hire(cmd) fold (
-      f => println(s"error $f occurred on $cmd"), // todo send back to sender
+      f => sender ! ErrorMessage(s"error $f occurred on $cmd"),
       s => persist(EmployeeHired(s.id, s.version, s.lastName, s.firstName, s.address.street, s.address.city,
         s.address.stateOrProvince, s.address.postalCode, s.address.country, s.startDate, s.dept, s.title, s.salary)) { event =>
           updateState(s)
           context.system.eventStream.publish(event)
         })
     case cmd: ChangeEmployeeLastName => changeLastName(cmd) fold (
-      f => println(s"error $f occurred on $cmd"), // todo send back to sender
+      f => sender ! ErrorMessage(s"error $f occurred on $cmd"),
       s => persist(EmployeeLastNameChanged(s.id, s.version, s.lastName)) { event =>
         updateState(s)
         context.system.eventStream.publish(event)
       })
     case cmd: ChangeEmployeeFirstName => changeFirstName(cmd) fold (
-      f => println(s"error $f occurred on $cmd"), // todo send back to sender
+      f => sender ! ErrorMessage(s"error $f occurred on $cmd"),
       s => persist(EmployeeFirstNameChanged(s.id, s.version, s.firstName)) { event =>
         updateState(s)
         context.system.eventStream.publish(event)
       })
     case cmd: ChangeEmployeeAddress => changeAddress(cmd) fold (
-      f => println(s"error $f occurred on $cmd"), // todo send back to sender
+      f => sender ! ErrorMessage(s"error $f occurred on $cmd"),
       s => persist(EmployeeAddressChanged(s.id, s.version, s.address.street, s.address.city, s.address.stateOrProvince,
         s.address.country, s.address.postalCode)) { event =>
           updateState(s)
           context.system.eventStream.publish(event)
       })
     case cmd: ChangeEmployeeStartDate => changeStartDate(cmd) fold (
-      f => println(s"error $f occurred on $cmd"), // todo send back to sender
+      f => sender ! ErrorMessage(s"error $f occurred on $cmd"),
       s => persist(EmployeeStartDateChanged(s.id, s.version, s.startDate)) { event =>
         updateState(s)
         context.system.eventStream.publish(event)
       })
     case cmd: ChangeEmployeeDept => changeDept(cmd) fold (
-      f => println(s"error $f occurred on $cmd"), // todo send back to sender
+      f => sender ! ErrorMessage(s"error $f occurred on $cmd"),
       s => persist(EmployeeDeptChanged(s.id, s.version, s.dept)) { event =>
         updateState(s)
         context.system.eventStream.publish(event)
       })
     case cmd: ChangeEmployeeTitle => changeTitle(cmd) fold (
-      f => println(s"error $f occurred on $cmd"), // todo send back to sender
+      f => sender ! ErrorMessage(s"error $f occurred on $cmd"),
       s => persist(EmployeeTitleChanged(s.id, s.version, s.title)) { event =>
         updateState(s)
         context.system.eventStream.publish(event)
       })
     case cmd: ChangeEmployeeSalary => changeSalary(cmd) fold (
-      f => println(s"error $f occurred on $cmd"), // todo send back to sender
+      f => sender ! ErrorMessage(s"error $f occurred on $cmd"),
       s => persist(EmployeeSalaryChanged(s.id, s.version, s.salary)) { event =>
         updateState(s)
         context.system.eventStream.publish(event)
       })
     case cmd: DeactivateEmployee => deactivate(cmd) fold (
-      f => println(s"error $f occurred on $cmd"), // todo send back to sender
+      f => sender ! ErrorMessage(s"error $f occurred on $cmd"),
       s => persist(EmployeeDeactivated(s.id, s.version, s.deactivateDate)) { event =>
        updateState(s)
        context.system.eventStream.publish(event)
       })
     case cmd: ActivateEmployee => activate(cmd) fold (
-      f => println(s"error $f occurred on $cmd"), // todo send back to sender
+      f => sender ! ErrorMessage(s"error $f occurred on $cmd"),
       s => persist(EmployeeActivated(s.id, s.version, s.startDate)) { event =>
         updateState(s)
         context.system.eventStream.publish(event)
       })
     case cmd: TerminateEmployee => terminate(cmd) fold (
-      f => println(s"error $f occurred on $cmd"), // todo send back to sender
+      f => sender ! ErrorMessage(s"error $f occurred on $cmd"),
       s => persist(EmployeeTerminated(s.id, s.version, s.termDate, s.termReason)) { event =>
         updateState(s)
         context.system.eventStream.publish(event)
       })
     case cmd: RehireEmployee => rehire(cmd) fold (
-      f => println(s"error $f occurred on $cmd"), // todo send back to sender
+      f => sender ! ErrorMessage(s"error $f occurred on $cmd"),
       s => persist(EmployeeRehired(s.id, s.version, s.startDate)) { event =>
         updateState(s)
         context.system.eventStream.publish(event)
@@ -370,7 +371,7 @@ class EmployeeProcessor extends EventsourcedProcessor {
     case RunPayroll => state.getActiveAll map { e =>
       val cmd = PayEmployee(e.id, e.version, BigDecimal(5000))
       pay(cmd) fold(
-        f => println(s"error $f occurred on $cmd"), // todo send back to sender
+        f => sender ! ErrorMessage(s"error $f occurred on $cmd"),
         s => persist(EmployeePaid(s.id, s.version, cmd.amount)) { event =>
           updateState(s)
           context.system.eventStream.publish(event)
@@ -444,64 +445,4 @@ class EmployeeProcessor extends EventsourcedProcessor {
       case emp: TerminatedEmployee => fn(emp)
       case emp                     => s"$emp for $cmd is not terminated".failNel
     }
-}
-
-object EmployeeProcessorExample extends App {
-
-  val system = ActorSystem("employee-example")
-  val processor = system.actorOf(Props[EmployeeProcessor], "employee-processor")
-
-  processor ! "print"
-
-  processor ! HireEmployee("1", -1l, "Devore", "duncan", "123 Big Road", "Perkiomenville", "PA", "18074", "USA", 1393632000000L,
-    "Technology", "The Total Package", BigDecimal(300000))
-
-  processor ! "print"
-
-  processor ! ChangeEmployeeLastName("1", 0, "DeVore")
-
-  processor ! "print"
-
-  processor ! SnapshotEmployees
-
-  processor ! ChangeEmployeeFirstName("1", 1, "Duncan")
-
-  processor ! "print"
-
-//  processor ! HireEmployee("2", -1l, "Sean", "Walsh", "321 Large Ave.", "Rumson", "NJ", "07760", "USA", 1399150441L,
-//    "Technology", "The Brain", BigDecimal(300000))
-
-  processor ! HireEmployee("2", -1l, "Sean", "Walsh", "321 Large Ave.", "Rumson", "NJ", "07760", "USA", 1393632000000L,
-    "Technology", "The Brain", BigDecimal(300000))
-
-  processor ! "print"
-
-  processor ! DeactivateEmployee("2", 0, 1396750647000L)
-
-  processor ! "print"
-
-//  processor ! ActivateEmployee("2", 1, 1399342647000L)
-
-  processor ! ActivateEmployee("2", 1, 1397088000000L)
-
-  processor ! "print"
-
-  processor ! TerminateEmployee("2", 2, 1399334400000L, "tired of working here")
-
-  processor ! "print"
-
-  processor ! RehireEmployee("2", 3, 1399420800000L)
-
-  processor ! "print"
-
-  processor ! RunPayroll
-
-  processor ! "print"
-
-//  processor ! ChangeEmployeeLastName("3", 0, "Smith")
-//
-//  processor ! ChangeEmployeeFirstName("3", 0, "Smith")
-
-  Thread.sleep(2000)
-  system.shutdown()
 }
