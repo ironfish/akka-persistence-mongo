@@ -3,11 +3,13 @@
 Home for Reactive application using the following stack:
 
 - Akka-Persistence
-- Akka-Persistence Mongo Journal
-- Scalaz for non-breaking error handling
-- Salat for case class serialization atop the mongo casbah driver
-- Embedded Mongo for testing
-- ScalaTest
+  - [Mongo Journal](https://github.com/ddevore/akka-persistence-mongo/) for journal persistence.
+  - [EventsourcedProcessor](http://doc.akka.io/docs/akka/current/scala/persistence.html#Event_sourcing) for processing commands and journaling events.
+  - [Views](http://doc.akka.io/docs/akka/current/scala/persistence.html#Views) for projecting CQRS query-side data.
+- [Scalaz](https://github.com/scalaz/scalaz) for non-breaking error handling.
+- [Salat](https://github.com/novus/salat) for case class serialization atop the mongo casbah driver on query-side.
+- [Embedded Mongo](https://github.com/flapdoodle-oss/de.flapdoodle.embed.mongo) for test store.
+- [ScalaTest](http://www.scalatest.org/) for testing.
 
 ## Description
 
@@ -28,15 +30,19 @@ Domain events represent the true state changes to a domain entity. They are a hi
 
 ### CQRS
 
-// TODO
+Command Query Responsibility Segregation is an architectural pattern created by Greg Young, based on Bertrand Meyer’s Command and Query Separation principle. Wikipedia defines this principle as:
+
+> It states that every method should either be a command that performs an action, or a query that returns data to the caller, but not both. In other words, asking a question should not change the answer. More formally, methods should return a value only if they are referentially transparent and hence possess no side effects. (Wikipedia)
+
+CQRS is similar to CQS in that it uses the same definition for Commands and Queries, but fundamentally believes that Commands and Queries should distinct objects in the domain. One of the key advantages to CQRS is that because the Commands (writes) are separate from the Queries (reads) it allows for distinct optimization of each of these concerns.
 
 ### DDD Implementation
 
-// TODO
+// TODO - explain 1-n model as opposed to 1-1.
 
 ### Example Workflow
 
-// TODO
+// TODO - explain CQRS implementation where command side aggregate in-memory model can be queried.
 
 ## Status
 
@@ -48,8 +54,14 @@ Domain events represent the true state changes to a domain entity. They are a hi
     - ~~Rehire~~
 - ~~Add Run Payroll~~
 - ~~Implement base tests~~
-- Implement CQRS query side w/ views
-- Implement CQRS tests
+- ~~Implement CQRS query side w/ views~~
+- ~~Implement CQRS tests~~
+- Implement Channel
+- Implement Channel tests
+
+## Disclaimer
+
+// TODO
 
 ## Author / Maintainer
 
