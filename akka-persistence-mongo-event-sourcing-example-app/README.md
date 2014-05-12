@@ -56,8 +56,9 @@ CQRS is similar to CQS in that it uses the same definition for Commands and Quer
 - ~~Implement base tests~~
 - ~~Implement CQRS query side w/ views~~
 - ~~Implement CQRS tests~~
-- Implement Channel
-- Implement Channel tests
+- ~~Implement Channel~~
+- ~~Implement Channel tests~~
+- Implement get
 
 ## Disclaimer
 

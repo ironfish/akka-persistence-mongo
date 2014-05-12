@@ -6,9 +6,6 @@ package org.esexample
 import akka.testkit.{TestProbe, ImplicitSender, TestKit}
 import akka.actor.{ActorRef, Props, ActorSystem}
 
-import com.mongodb.casbah.Imports._
-import com.novus.salat._
-import com.novus.salat.global._
 import com.typesafe.config.ConfigFactory
 
 import concurrent.duration._
@@ -42,6 +39,8 @@ object EmployeeSpec {
       |casbah-snapshot-store.mongo-snapshot-write-concern = "acknowledged"
       |casbah-snapshot-store.mongo-snapshot-write-concern-timeout = 10000
       |benefits-view.mongo-url = "mongodb://localhost:$port/hr.benefits"
+      |benefits-view.channel = "benefits-channel"
+      |benefits-view.destination = "benefits-destination"
     """.stripMargin)
 
   lazy val freePort = Network.getFreeServerPort
@@ -108,7 +107,6 @@ class EmployeeSpec extends TestKit(ActorSystem("test", EmployeeSpec.config(Emplo
   override def afterAll() = {
     system.shutdown()
     system.awaitTermination(duration)
-    client.close()
     mongod.stop()
     mongodExe.stop()
   }
@@ -120,11 +118,6 @@ class EmployeeSpec extends TestKit(ActorSystem("test", EmployeeSpec.config(Emplo
   val TerminateDateMay3rd2014Midnight = 1399075200000L
   val RehireDateMay4th2014Midnight = 1399161600000L
 
-  val uri = MongoClientURI(EmployeeSpec.config(freePort).getString("benefits-view.mongo-url"))
-  val client =  MongoClient(uri)
-  val db = client(uri.database.get)
-  val coll = db(uri.collection.get)
-
   "The Application" must {
     "when issued a validated HireEmployee command, generate a persisted EmployeeHired event" in {
       val probe = TestProbe()
@@ -133,15 +126,6 @@ class EmployeeSpec extends TestKit(ActorSystem("test", EmployeeSpec.config(Emplo
         StartDateMarch1st2014Midnight, "Technology", "The Total Package", BigDecimal(300000))
       employeeProcessor ! msg
       probe.expectMsgType[EmployeeHired]
-    }
-    "when persisted EmployeeHired view persists associated BenefitDates" in {
-      val Expected = Some(BenefitDates(IdJonSmith, StartDateMarch1st2014Midnight, Nil, Nil, Nil))
-      awaitCond({
-        val dbo = coll.findOne(MongoDBObject("employeeId" -> IdJonSmith))
-        if (!dbo.isDefined) false
-        else if (Some(grater[BenefitDates].asObject(dbo.get)) == Expected) true
-        else false
-      }, duration, 100 milliseconds, "BenefitDates read side failure.")
     }
     "when issued a validated ChangeEmployeeLastName command, generate a persisted EmployeeLastNameChanged event" in {
       val probe = TestProbe()
@@ -199,30 +183,12 @@ class EmployeeSpec extends TestKit(ActorSystem("test", EmployeeSpec.config(Emplo
       employeeProcessor ! msg
       probe.expectMsgType[EmployeeDeactivated]
     }
-    "when persisted EmployeeDeactivated view persists associated BenefitDates" in {
-      val Expected = Some(BenefitDates(IdJonSmith, StartDateMarch1st2014Midnight, List(DeactivateDateMay1st2014Midnight), Nil, Nil))
-      awaitCond({
-        val dbo = coll.findOne(MongoDBObject("employeeId" -> IdJonSmith))
-        if (!dbo.isDefined) false
-        else if (Some(grater[BenefitDates].asObject(dbo.get)) == Expected) true
-        else false
-      }, duration, 100 milliseconds, "BenefitDates read side failure.")
-    }
     "when issued a validated ActivateEmployee command, generate a persisted EmployeeActivated event" in {
       val probe = TestProbe()
       system.eventStream.subscribe(probe.ref, classOf[EmployeeActivated])
       val msg = ActivateEmployee(IdJonSmith, 8, ActivateDateMay2nd2014Midnight)
       employeeProcessor ! msg
       probe.expectMsgType[EmployeeActivated]
-    }
-    "when persisted EmployeeActivated view persists associated BenefitDates" in {
-      val Expected = Some(BenefitDates(IdJonSmith, ActivateDateMay2nd2014Midnight, List(DeactivateDateMay1st2014Midnight), Nil, Nil))
-      awaitCond({
-        val dbo = coll.findOne(MongoDBObject("employeeId" -> IdJonSmith))
-        if (!dbo.isDefined) false
-        else if (Some(grater[BenefitDates].asObject(dbo.get)) == Expected) true
-        else false
-      }, duration, 100 milliseconds, "BenefitDates read side failure.")
     }
     "when issued a validated TerminateEmployee command, generate a persisted EmployeeTerminated event" in {
       val probe = TestProbe()
@@ -231,32 +197,12 @@ class EmployeeSpec extends TestKit(ActorSystem("test", EmployeeSpec.config(Emplo
       employeeProcessor ! msg
       probe.expectMsgType[EmployeeTerminated]
     }
-    "when persisted EmployeeTerminated view persists associated BenefitDates" in {
-      val Expected = Some(BenefitDates(IdJonSmith, ActivateDateMay2nd2014Midnight, List(DeactivateDateMay1st2014Midnight),
-        List(TerminateDateMay3rd2014Midnight), Nil))
-      awaitCond({
-        val dbo = coll.findOne(MongoDBObject("employeeId" -> IdJonSmith))
-        if (!dbo.isDefined) false
-        else if (Some(grater[BenefitDates].asObject(dbo.get)) == Expected) true
-        else false
-      }, duration, 100 milliseconds, "BenefitDates read side failure.")
-    }
     "when issued a validated RehireEmployee command, generate a persisted EmployeeRehired event" in {
       val probe = TestProbe()
       system.eventStream.subscribe(probe.ref, classOf[EmployeeRehired])
       val msg = RehireEmployee(IdJonSmith, 10, RehireDateMay4th2014Midnight)
       employeeProcessor ! msg
       probe.expectMsgType[EmployeeRehired]
-    }
-    "when persisted EmployeeRehired view persists associated BenefitDates" in {
-      val Expected = Some(BenefitDates(IdJonSmith, ActivateDateMay2nd2014Midnight, List(DeactivateDateMay1st2014Midnight),
-      List(TerminateDateMay3rd2014Midnight), List(RehireDateMay4th2014Midnight)))
-      awaitCond({
-        val dbo = coll.findOne(MongoDBObject("employeeId" -> IdJonSmith))
-        if (!dbo.isDefined) false
-        else if (Some(grater[BenefitDates].asObject(dbo.get)) == Expected) true
-        else false
-      }, duration, 100 milliseconds, "BenefitDates read side failure.")
     }
     "when issued a RunPayroll request for two employees, two EmployeePaid events are persisted" in {
       val probe = TestProbe()
