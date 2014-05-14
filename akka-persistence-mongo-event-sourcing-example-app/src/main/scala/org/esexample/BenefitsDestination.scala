@@ -14,23 +14,18 @@ import BenefitsProtocol._
       payload match {
         case msg: BenefitsHired =>
           context.system.eventStream.publish(msg)
-          // println(s"destination received ${payload} (sequence nr = ${sequenceNr})")
           cp.confirm()
         case msg: BenefitsDeactivated =>
           context.system.eventStream.publish(msg)
-          // println(s"destination received ${payload} (sequence nr = ${sequenceNr})")
           cp.confirm()
         case msg: BenefitsActivated =>
           context.system.eventStream.publish(msg)
-          // println(s"destination received ${payload} (sequence nr = ${sequenceNr})")
           cp.confirm()
         case msg: BenefitsTerminated =>
           context.system.eventStream.publish(msg)
-          // println(s"destination received ${payload} (sequence nr = ${sequenceNr})")
           cp.confirm()
         case msg: BenefitsRehired =>
           context.system.eventStream.publish(msg)
-          // println(s"destination received ${payload} (sequence nr = ${sequenceNr})")
           cp.confirm()
       }
   }

@@ -352,6 +352,9 @@ class EmployeeProcessor extends EventsourcedProcessor {
           updateState(s)
           context.system.eventStream.publish(event)
         })}
+    case cmd: GetEmployee   =>
+      println(state.get(cmd.id))
+      sender ! state.get(cmd.id)
     case SnapshotEmployees  => saveSnapshot(state)
     case "print"            => println("STATE: " + state)
   }

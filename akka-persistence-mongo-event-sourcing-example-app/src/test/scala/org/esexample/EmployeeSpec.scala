@@ -239,5 +239,10 @@ class EmployeeSpec extends TestKit(ActorSystem("test", EmployeeSpec.config(Emplo
       expectMsgType[ErrorMessage]
       probe.expectNoMsg()
     }
+    "when issued a GetEmployee command respond with the appropriate employee" in {
+      employeeProcessor ! GetEmployee("2")
+      expectMsg(Some(ActiveEmployee("2",1,"Sean","Walsh",Address("321 Large Ave.","Rumson","NJ","USA","07760"),1393632000000L,
+        "Technology","The Brain",300000,295000)))
+    }
   }
 }
