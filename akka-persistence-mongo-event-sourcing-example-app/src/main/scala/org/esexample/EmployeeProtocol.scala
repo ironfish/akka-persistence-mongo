@@ -60,6 +60,7 @@ object EmployeeProtocol {
   final case class EmployeePaid(id: String, version: Long, amount: BigDecimal) extends EmployeeEvent
 
   final case class ErrorMessage(data: String)
+  final case class GetEmployee(id: String)
 
   case object RunPayroll
   case object SnapshotEmployees
