@@ -27,5 +27,5 @@ resolvers += "Sonatype snapshots" at "https://oss.sonatype.org/content/repositor
 
 libraryDependencies ++= Seq(
   "org.mongodb"         %% "casbah"                        % "2.7.1"              % "compile",
-  "com.github.krasserm" %% "akka-persistence-testkit"      % "0.3.1"              % "test"
+  "com.github.krasserm" %% "akka-persistence-testkit"      % "0.3.3"              % "test"
 )

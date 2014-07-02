@@ -4,29 +4,25 @@
 package org.esexample
 
 import akka.actor.Actor
-import akka.persistence.ConfirmablePersistent
 
+@deprecated("This is no longer pertinent to the example but may be used in a future example.", since = "0.7.3")
 class BenefitsDestination extends Actor {
 import BenefitsProtocol._
 
   def receive = {
-    case cp @ ConfirmablePersistent(payload, sequenceNr, _) =>
+    case Msg(deliveryId, payload) => {
       payload match {
-        case msg: BenefitsHired =>
-          context.system.eventStream.publish(msg)
-          cp.confirm()
-        case msg: BenefitsDeactivated =>
-          context.system.eventStream.publish(msg)
-          cp.confirm()
-        case msg: BenefitsActivated =>
-          context.system.eventStream.publish(msg)
-          cp.confirm()
-        case msg: BenefitsTerminated =>
-          context.system.eventStream.publish(msg)
-          cp.confirm()
-        case msg: BenefitsRehired =>
-          context.system.eventStream.publish(msg)
-          cp.confirm()
+        case msg: BenefitsHired => handle(deliveryId, msg)
+        case msg: BenefitsDeactivated => handle(deliveryId, msg)
+        case msg: BenefitsActivated => handle(deliveryId, msg)
+        case msg: BenefitsTerminated => handle(deliveryId, msg)
+        case msg: BenefitsRehired => handle(deliveryId, msg)
       }
+    }
+  }
+
+  def handle(deliveryId: Long, benefitsMessage: BenefitsMessage) = {
+    context.system.eventStream.publish(benefitsMessage)
+    sender ! Confirm(deliveryId)
   }
 }

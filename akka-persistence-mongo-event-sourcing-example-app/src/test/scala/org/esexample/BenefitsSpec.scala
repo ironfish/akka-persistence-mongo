@@ -3,7 +3,7 @@
  */
 package org.esexample
 
-import akka.testkit.{TestProbe, ImplicitSender, TestKit}
+import akka.testkit.{ImplicitSender, TestKit}
 import akka.actor.{ActorRef, Props, ActorSystem}
 
 import com.mongodb.casbah.Imports._
@@ -58,7 +58,6 @@ class BenefitsSpec extends TestKit(ActorSystem("test-benefits", BenefitsSpec.con
 
   import BenefitsSpec._
   import EmployeeProtocol._
-  import BenefitsProtocol._
 
   lazy val host = "localhost"
   lazy val port = freePort
@@ -129,8 +128,6 @@ class BenefitsSpec extends TestKit(ActorSystem("test-benefits", BenefitsSpec.con
 
   "The Application" must {
     "when persisted EmployeeHired view persists associated BenefitDates" in {
-      val probe = TestProbe()
-      system.eventStream.subscribe(probe.ref, classOf[BenefitsHired])
       employeeProcessor ! HireEmployee(IdJonSmith, -1l, "smith", "jon", "123 Big Road", "Perkiomenville", "PA", "18074", "USA",
         StartDateMarch1st2014Midnight, "Technology", "The Total Package", BigDecimal(300000))
       val Expected = Some(BenefitDates(IdJonSmith, StartDateMarch1st2014Midnight, Nil, Nil, Nil))
@@ -140,11 +137,8 @@ class BenefitsSpec extends TestKit(ActorSystem("test-benefits", BenefitsSpec.con
         else if (Some(grater[BenefitDates].asObject(dbo.get)) == Expected) true
         else false
       }, duration, 500 milliseconds, "BenefitDates read side failure.")
-      probe.expectMsgType[BenefitsHired](500 millis)
     }
     "when persisted EmployeeDeactivated view persists associated BenefitDates" in {
-      val probe = TestProbe()
-      system.eventStream.subscribe(probe.ref, classOf[BenefitsDeactivated])
       employeeProcessor ! DeactivateEmployee(IdJonSmith, 0L, DeactivateDateMay1st2014Midnight)
       val Expected = Some(BenefitDates(IdJonSmith, StartDateMarch1st2014Midnight, List(DeactivateDateMay1st2014Midnight), Nil, Nil))
       awaitCond({
@@ -153,11 +147,8 @@ class BenefitsSpec extends TestKit(ActorSystem("test-benefits", BenefitsSpec.con
         else if (Some(grater[BenefitDates].asObject(dbo.get)) == Expected) true
         else false
       }, duration, 500 milliseconds, "BenefitDates read side failure.")
-      probe.expectMsgType[BenefitsDeactivated](500 millis)
     }
     "when persisted EmployeeActivated view persists associated BenefitDates" in {
-      val probe = TestProbe()
-      system.eventStream.subscribe(probe.ref, classOf[BenefitsActivated])
       employeeProcessor ! ActivateEmployee(IdJonSmith, 1L, ActivateDateMay2nd2014Midnight)
       val Expected = Some(BenefitDates(IdJonSmith, ActivateDateMay2nd2014Midnight, List(DeactivateDateMay1st2014Midnight), Nil, Nil))
       awaitCond({
@@ -166,11 +157,8 @@ class BenefitsSpec extends TestKit(ActorSystem("test-benefits", BenefitsSpec.con
         else if (Some(grater[BenefitDates].asObject(dbo.get)) == Expected) true
         else false
       }, duration, 500 milliseconds, "BenefitDates read side failure.")
-      probe.expectMsgType[BenefitsActivated](500 millis)
     }
     "when persisted EmployeeTerminated view persists associated BenefitDates" in {
-      val probe = TestProbe()
-      system.eventStream.subscribe(probe.ref, classOf[BenefitsTerminated])
       employeeProcessor ! TerminateEmployee(IdJonSmith, 2L, TerminateDateMay3rd2014Midnight, "Tired")
       val Expected = Some(BenefitDates(IdJonSmith, ActivateDateMay2nd2014Midnight, List(DeactivateDateMay1st2014Midnight),
         List(TerminateDateMay3rd2014Midnight), Nil))
@@ -180,11 +168,8 @@ class BenefitsSpec extends TestKit(ActorSystem("test-benefits", BenefitsSpec.con
         else if (Some(grater[BenefitDates].asObject(dbo.get)) == Expected) true
         else false
       }, duration, 500 milliseconds, "BenefitDates read side failure.")
-      probe.expectMsgType[BenefitsTerminated](500 millis)
     }
     "when persisted EmployeeRehired view persists associated BenefitDates" in {
-      val probe = TestProbe()
-      system.eventStream.subscribe(probe.ref, classOf[BenefitsRehired])
       employeeProcessor ! RehireEmployee(IdJonSmith, 3L, RehireDateMay4th2014Midnight)
       val Expected = Some(BenefitDates(IdJonSmith, ActivateDateMay2nd2014Midnight, List(DeactivateDateMay1st2014Midnight),
         List(TerminateDateMay3rd2014Midnight), List(RehireDateMay4th2014Midnight)))
@@ -194,7 +179,6 @@ class BenefitsSpec extends TestKit(ActorSystem("test-benefits", BenefitsSpec.con
         else if (Some(grater[BenefitDates].asObject(dbo.get)) == Expected) true
         else false
       }, duration, 500 milliseconds, "BenefitDates read side failure.")
-      probe.expectMsgType[BenefitsRehired](500 millis)
     }
   }
 }

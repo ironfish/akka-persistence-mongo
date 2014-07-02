@@ -55,7 +55,6 @@ class EmployeeSpec extends TestKit(ActorSystem("test", EmployeeSpec.config(Emplo
 
   import EmployeeSpec._
   import EmployeeProtocol._
-  import BenefitsProtocol._
 
   lazy val host = "localhost"
   lazy val port = freePort

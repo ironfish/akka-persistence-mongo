@@ -31,8 +31,8 @@ private[persistence] class CasbahSnapshotStore  extends SnapshotStore
   /** Snapshots we're in progress of saving */
   private var saving = immutable.Set.empty[SnapshotMetadata]
 
-  override def delete(processorId: String, criteria: SnapshotSelectionCriteria): Unit =
-    collection.remove(delStatement(processorId, criteria))
+  override def delete(persistenceId: String, criteria: SnapshotSelectionCriteria): Unit =
+    collection.remove(delStatement(persistenceId, criteria))
 
   override def delete(metadata: SnapshotMetadata): Unit = {
     saving -= metadata
@@ -47,12 +47,12 @@ private[persistence] class CasbahSnapshotStore  extends SnapshotStore
     Future(collection.insert(writeJSON(SelectedSnapshot(metadata, snapshot))))
   }
 
-  override def loadAsync(processorId: String, criteria: SnapshotSelectionCriteria): Future[Option[SelectedSnapshot]] = {
+  override def loadAsync(persistenceId: String, criteria: SnapshotSelectionCriteria): Future[Option[SelectedSnapshot]] = {
     // Select the youngest of {n} snapshots that match the upper bound. This helps where a snapshot may not have
     // persisted correctly because of a JVM crash. As a result an attempt to load the snapshot may fail but an older
     // may succeed.
     Future {
-      val snaps = collection.find(snapshotsQueryStatement(processorId, criteria))
+      val snaps = collection.find(snapshotsQueryStatement(persistenceId, criteria))
         .sort(snapshotsSortStatement)
         .limit(configMongoSnapshotLoadAttempts)
       load(snaps.to[immutable.Seq])

@@ -3,7 +3,7 @@
  */
 package org.esexample
 
-import akka.persistence.{SnapshotOffer, EventsourcedProcessor}
+import akka.persistence.{PersistentActor, SnapshotOffer}
 
 import org.joda.time.{DateTimeZone, DateTime}
 
@@ -212,13 +212,13 @@ final case class EmployeeState(employees: Map[String, Employee] = Map.empty) {
 
 /**
  * The EmployeeProcessor is responsible for maintaining  state changes for all [[Employee]] aggregates. This particular
- * processor uses Akka-Persistence's [[EventsourcedProcessor]]. It receives Commands and if valid will persist the generated events,
+ * processor uses Akka-Persistence's [[PersistentActor]]. It receives Commands and if valid will persist the generated events,
  * afterwhich it will updated the current state of the [[Employee]] being processed.
  */
-class EmployeeProcessor extends EventsourcedProcessor {
+class EmployeeProcessor extends PersistentActor {
   import EmployeeProtocol._
 
-  override def processorId = "employee-processor"
+  override def persistenceId = "employee-persistence"
 
   var state = EmployeeState()
 

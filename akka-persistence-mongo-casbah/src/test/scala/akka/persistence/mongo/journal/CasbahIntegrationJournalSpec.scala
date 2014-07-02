@@ -1,6 +1,6 @@
 /**
- *  Copyright (C) 2013-2014 Duncan DeVore. <http://reactant.org>
- */
+*  Copyright (C) 2013-2014 Duncan DeVore. <http://reactant.org>
+*/
 package akka.persistence.mongo.journal
 
 import akka.actor._
@@ -13,6 +13,10 @@ import com.typesafe.config.ConfigFactory
 import org.scalatest._
 
 import scala.concurrent.duration._
+
+case class Msg(deliveryId: Long, payload: Any)
+case class Confirm(deliverId: Long)
+case class MsgConfirmed(deliveryId: Long)
 
 object CasbahIntegrationJournalSpec {
 
@@ -31,66 +35,93 @@ object CasbahIntegrationJournalSpec {
       |casbah-snapshot-store.mongo-snapshot-write-concern-timeout = 10000
     """.stripMargin)
 
-  case class Delete(snr: Long, permanent: Boolean)
   case class DeleteTo(snr: Long, permanent: Boolean)
 
-  class ProcessorA(override val processorId: String) extends Processor {
-    def receive = {
-      case Persistent(payload, sequenceNr) =>
-        sender ! payload
-        sender ! sequenceNr
-        sender ! recoveryRunning
-      case Delete(sequenceNr, permanent) =>
-        deleteMessage(sequenceNr, permanent)
+  class ProcessorA(val persistenceId: String) extends PersistentActor {
+    def receiveRecover: Receive = handle
+
+    def receiveCommand: Receive = {
       case DeleteTo(sequenceNr, permanent) =>
         deleteMessages(sequenceNr, permanent)
+      case payload: String =>
+        persist(payload)(handle)
+    }
+
+    def handle: Receive = {
+      case payload: String =>
+        sender ! payload
+        sender ! lastSequenceNr
+        sender ! recoveryRunning
     }
   }
 
-  class ProcessorB(override val processorId: String) extends Processor {
+  class ProcessorB(override val persistenceId: String) extends PersistentActor with AtLeastOnceDelivery {
     val destination = context.actorOf(Props[Destination])
-    val channel = context.actorOf(Channel.props("channel"))
 
-    def receive = {
-      case p: Persistent =>
-        channel forward Deliver(p, destination.path)
+    def receiveCommand: Receive = {
+      case DeleteTo(sequenceNr, permanent) =>
+        deleteMessages(sequenceNr, permanent)
+      case Confirm(deliveryId) ⇒
+          confirmDelivery(deliveryId)
+          context.system.eventStream.publish(MsgConfirmed(deliveryId))
+      case payload =>  persist(payload)(handle)
     }
+
+    def handle: Receive = {
+      case payload: String =>
+        sender ! payload
+        sender ! lastSequenceNr
+        sender ! recoveryRunning
+
+        deliver(destination.path, deliveryId ⇒ Msg(deliveryId, payload))
+    }
+
+    def receiveRecover: Receive = {
+      case _ =>
+    }
+
   }
 
   class Destination extends Actor {
     def receive = {
-      case cp @ ConfirmablePersistent(payload, sequenceNr, _) =>
-        sender ! s"$payload-$sequenceNr"
-        cp.confirm()
+      case Msg(deliveryId, payload) => sender ! Confirm(deliveryId)
     }
   }
 
-  class ProcessorC(override val processorId: String, probe: ActorRef) extends Processor {
+  class ProcessorC(val persistenceId: String, probe: ActorRef) extends PersistentActor {
     var last: String = _
 
-    def receive = {
-      case Persistent(payload: String, sequenceNr) =>
-        last = s"$payload-$sequenceNr"
-        probe ! s"updated-$last"
+    def receiveRecover: Receive = {
+      case SnapshotOffer(_, snapshot: String) =>
+        last = snapshot
+        probe ! s"offered-$last"
+      case payload: String =>
+        handle(payload)
+    }
+
+    def receiveCommand: Receive = {
       case "snap" =>
         saveSnapshot(last)
       case SaveSnapshotSuccess(_) =>
         probe ! s"snapped-$last"
-      case SnapshotOffer(_, snapshot: String) =>
-        last = snapshot
-        probe ! s"offered-$last"
-      case Delete(sequenceNr, permanent) =>
-        deleteMessage(sequenceNr, permanent)
+      case payload: String =>
+        persist(payload)(handle)
+    }
+
+    def handle: Receive = {
+      case payload: String =>
+        last = s"$payload-$lastSequenceNr"
+        probe ! s"updated-$last"
     }
   }
 
-  class ProcessorCNoRecover(override val processorId: String, probe: ActorRef) extends ProcessorC(processorId, probe) {
+  class ProcessorCNoRecover(override val persistenceId: String, probe: ActorRef) extends ProcessorC(persistenceId, probe) {
     override def preStart() = ()
   }
 
-  class ViewA(val processorId: String, probe: ActorRef) extends View {
+  class ViewA(val viewId: String, val persistenceId: String, probe: ActorRef) extends PersistentView {
     def receive = {
-      case Persistent(payload, _) =>
+      case payload =>
         probe ! payload
     }
 
@@ -111,69 +142,37 @@ class CasbahIntegrationJournalSpec extends TestKit(ActorSystem("test", config(fr
   override val actorSystem = system
 
   def subscribeToConfirmation(probe: TestProbe): Unit =
-    system.eventStream.subscribe(probe.ref, classOf[Delivered])
+     system.eventStream.subscribe(probe.ref, classOf[MsgConfirmed])
 
-  def subscribeToBatchDeletion(probe: TestProbe): Unit =
-    system.eventStream.subscribe(probe.ref, classOf[JournalProtocol.DeleteMessages])
+   def subscribeToBatchDeletion(probe: TestProbe): Unit =
+     system.eventStream.subscribe(probe.ref, classOf[JournalProtocol.DeleteMessages])
 
-  def subscribeToRangeDeletion(probe: TestProbe): Unit =
-    system.eventStream.subscribe(probe.ref, classOf[JournalProtocol.DeleteMessagesTo])
+   def subscribeToRangeDeletion(probe: TestProbe): Unit =
+     system.eventStream.subscribe(probe.ref, classOf[JournalProtocol.DeleteMessagesTo])
 
-  def awaitConfirmation(probe: TestProbe): Unit =
-    probe.expectMsgType[Delivered]
+   def awaitBatchDeletion(probe: TestProbe): Unit =
+     probe.expectMsgType[JournalProtocol.DeleteMessages]
 
-  def awaitBatchDeletion(probe: TestProbe): Unit =
-    probe.expectMsgType[JournalProtocol.DeleteMessages]
+   def awaitRangeDeletion(probe: TestProbe): Unit =
+     probe.expectMsgType[JournalProtocol.DeleteMessagesTo]
 
-  def awaitRangeDeletion(probe: TestProbe): Unit =
-    probe.expectMsgType[JournalProtocol.DeleteMessagesTo]
+  def awaitConfirmation(probe: TestProbe, confirm: MsgConfirmed): Unit =
+    probe.expectMsg(3 seconds, confirm)
 
-  def testIndividualDelete(processorId: String, permanent: Boolean) {
-    val deleteProbe = TestProbe()
-    subscribeToBatchDeletion(deleteProbe)
-
-    val processor1 = system.actorOf(Props(classOf[ProcessorA], processorId))
-    1L to 16L foreach { i =>
-      processor1 ! Persistent(s"a-$i")
-      expectMsgAllOf(s"a-$i", i, false)
-    }
-
-    processor1 ! Delete(12L, permanent)
-    awaitBatchDeletion(deleteProbe)
-
-    system.actorOf(Props(classOf[ProcessorA], processorId))
-    1L to 16L foreach { i =>
-      if (i != 12L) expectMsgAllOf(s"a-$i", i, true)
-    }
-
-    6L to 10L foreach { i =>
-      processor1 ! Delete(i, permanent)
-      awaitBatchDeletion(deleteProbe)
-    }
-
-    system.actorOf(Props(classOf[ProcessorA], processorId))
-    1L to 5L foreach { i =>
-      expectMsgAllOf(s"a-$i", i, true)
-    }
-    11L to 16L foreach { i =>
-      if (i != 12L) expectMsgAllOf(s"a-$i", i, true)
-    }
-  }
-
-  def testRangeDelete(processorId: String, permanent: Boolean) {
+  def testRangeDelete(persistenceId: String, permanent: Boolean) {
     val deleteProbe = TestProbe()
     subscribeToRangeDeletion(deleteProbe)
 
-    val processor1 = system.actorOf(Props(classOf[ProcessorA], processorId))
+    val processor1 = system.actorOf(Props(classOf[ProcessorA], persistenceId))
     1L to 16L foreach { i =>
-      processor1 ! Persistent(s"a-$i")
+      processor1 ! s"a-$i"
       expectMsgAllOf(s"a-$i", i, false)
     }
 
     processor1 ! DeleteTo(3L, permanent)
     awaitRangeDeletion(deleteProbe)
 
-    system.actorOf(Props(classOf[ProcessorA], processorId))
+    system.actorOf(Props(classOf[ProcessorA], persistenceId))
     4L to 16L foreach { i =>
       expectMsgAllOf(s"a-$i", i, true)
     }
@@ -181,7 +180,7 @@ class CasbahIntegrationJournalSpec extends TestKit(ActorSystem("test", config(fr
     processor1 ! DeleteTo(7L, permanent)
     awaitRangeDeletion(deleteProbe)
 
-    system.actorOf(Props(classOf[ProcessorA], processorId))
+    system.actorOf(Props(classOf[ProcessorA], persistenceId))
     8L to 16L foreach { i =>
       expectMsgAllOf(s"a-$i", i, true)
     }
@@ -192,7 +191,7 @@ class CasbahIntegrationJournalSpec extends TestKit(ActorSystem("test", config(fr
     "write and replay messages" in {
       val processor1 = system.actorOf(Props(classOf[ProcessorA], "p1"))
       1L to 16L foreach { i =>
-        processor1 ! Persistent(s"a-$i")
+        processor1 ! s"a-$i"
         expectMsgAllOf(3.seconds, s"a-$i", i, false)
       }
 
@@ -201,7 +200,7 @@ class CasbahIntegrationJournalSpec extends TestKit(ActorSystem("test", config(fr
         expectMsgAllOf(s"a-$i", i, true)
       }
 
-      processor2 ! Persistent("b")
+      processor2 ! "b"
       expectMsgAllOf("b", 17L, false)
     }
 
@@ -211,23 +210,15 @@ class CasbahIntegrationJournalSpec extends TestKit(ActorSystem("test", config(fr
 
       val processor1 = system.actorOf(Props(classOf[ProcessorB], "p2"))
       1L to 16L foreach { i =>
-        processor1 ! Persistent("a")
-        awaitConfirmation(confirmProbe)
-        expectMsg(s"a-$i")
+        processor1 ! s"a-$i"
+        expectMsgAllOf(3.seconds, s"a-$i", i, false)
+        awaitConfirmation(confirmProbe, MsgConfirmed(i))
       }
 
       val processor2 = system.actorOf(Props(classOf[ProcessorB], "p2"))
-      processor2 ! Persistent("b")
-      awaitConfirmation(confirmProbe)
-      expectMsg("b-17")
-    }
-
-    "not replay messages marked as deleted" in {
-      testIndividualDelete("p3", permanent = false)
-    }
-
-    "not replay permanently deleted messages" in {
-      testIndividualDelete("p4", permanent = true)
+      processor2 ! "b"
+      awaitConfirmation(confirmProbe, MsgConfirmed(1))
+      expectMsgAllOf("b", 17L, false)
     }
 
     "not replay messages marked as range-deleted" in {
@@ -239,36 +230,36 @@ class CasbahIntegrationJournalSpec extends TestKit(ActorSystem("test", config(fr
     }
 
     "replay messages incrementally" in {
-      val probe = TestProbe()
-      val processor1 = system.actorOf(Props(classOf[ProcessorA], "p7"))
-      1L to 6L foreach { i =>
-        processor1 ! Persistent(s"a-$i")
-        expectMsgAllOf(s"a-$i", i, false)
-      }
+       val probe = TestProbe()
+       val processor1 = system.actorOf(Props(classOf[ProcessorA], "p7"))
+       1L to 6L foreach { i =>
+         processor1 ! s"a-$i"
+         expectMsgAllOf(s"a-$i", i, false)
+       }
 
-      val view = system.actorOf(Props(classOf[ViewA], "p7", probe.ref))
-      probe.expectNoMsg(200.millis)
+       val view = system.actorOf(Props(classOf[ViewA], "p7-view", "p7", probe.ref))
+       probe.expectNoMsg(200.millis)
 
-      view ! Update(await = true, replayMax = 3L)
-      probe.expectMsg(s"a-1")
-      probe.expectMsg(s"a-2")
-      probe.expectMsg(s"a-3")
-      probe.expectNoMsg(200.millis)
+       view ! Update(true, replayMax = 3L)
+       probe.expectMsg(s"a-1")
+       probe.expectMsg(s"a-2")
+       probe.expectMsg(s"a-3")
+       probe.expectNoMsg(200.millis)
 
-      view ! Update(await = true, replayMax = 3L)
-      probe.expectMsg(s"a-4")
-      probe.expectMsg(s"a-5")
-      probe.expectMsg(s"a-6")
-      probe.expectNoMsg(200.millis)
-    }
+       view ! Update(true, replayMax = 3L)
+       probe.expectMsg(s"a-4")
+       probe.expectMsg(s"a-5")
+       probe.expectMsg(s"a-6")
+       probe.expectNoMsg(200.millis)
+     }
 
     "recover from a snapshot with follow-up messages" in {
       val processor1 = system.actorOf(Props(classOf[ProcessorC], "p8", testActor))
-      processor1 ! Persistent("a")
+      processor1 ! "a"
       expectMsg("updated-a-1")
       processor1 ! "snap"
       expectMsg("snapped-a-1")
-      processor1 ! Persistent("b")
+      processor1 ! "b"
       expectMsg("updated-b-2")
 
       system.actorOf(Props(classOf[ProcessorC], "p8", testActor))
@@ -279,12 +270,12 @@ class CasbahIntegrationJournalSpec extends TestKit(ActorSystem("test", config(fr
     "recover from a snapshot with follow-up messages and an upper bound" in {
       val processor1 = system.actorOf(Props(classOf[ProcessorCNoRecover], "p9", testActor))
       processor1 ! Recover()
-      processor1 ! Persistent("a")
+      processor1 ! "a"
       expectMsg("updated-a-1")
       processor1 ! "snap"
       expectMsg("snapped-a-1")
       2L to 7L foreach { i =>
-        processor1 ! Persistent("a")
+        processor1 ! "a"
         expectMsg(s"updated-a-$i")
       }
 
@@ -293,27 +284,27 @@ class CasbahIntegrationJournalSpec extends TestKit(ActorSystem("test", config(fr
       expectMsg("offered-a-1")
       expectMsg("updated-a-2")
       expectMsg("updated-a-3")
-      processor2 ! Persistent("d")
+      processor2 ! "d"
       expectMsg("updated-d-8")
     }
 
     "recover from a snapshot without follow-up messages inside a partition" in {
       val processor1 = system.actorOf(Props(classOf[ProcessorC], "p10", testActor))
-      processor1 ! Persistent("a")
+      processor1 ! "a"
       expectMsg("updated-a-1")
       processor1 ! "snap"
       expectMsg("snapped-a-1")
 
       val processor2 = system.actorOf(Props(classOf[ProcessorC], "p10", testActor))
       expectMsg("offered-a-1")
-      processor2 ! Persistent("b")
+      processor2 ! "b"
       expectMsg("updated-b-2")
     }
 
     "recover from a snapshot without follow-up messages at a partition boundary (where next partition is invalid)" in {
       val processor1 = system.actorOf(Props(classOf[ProcessorC], "p11", testActor))
       1L to 5L foreach { i =>
-        processor1 ! Persistent("a")
+        processor1 ! "a"
         expectMsg(s"updated-a-$i")
       }
       processor1 ! "snap"
@@ -321,56 +312,8 @@ class CasbahIntegrationJournalSpec extends TestKit(ActorSystem("test", config(fr
 
       val processor2 = system.actorOf(Props(classOf[ProcessorC], "p11", testActor))
       expectMsg("offered-a-5")
-      processor2 ! Persistent("b")
+      processor2 ! "b"
       expectMsg("updated-b-6")
-    }
-
-    "recover from a snapshot without follow-up messages at a partition boundary (where next partition contains a message marked as deleted)" in {
-      val deleteProbe = TestProbe()
-      subscribeToBatchDeletion(deleteProbe)
-
-      val processor1 = system.actorOf(Props(classOf[ProcessorC], "p12", testActor))
-      1L to 5L foreach { i =>
-        processor1 ! Persistent("a")
-        expectMsg(s"updated-a-$i")
-      }
-      processor1 ! "snap"
-      expectMsg("snapped-a-5")
-
-      processor1 ! Persistent("a")
-      expectMsg("updated-a-6")
-
-      processor1 ! Delete(6L, permanent = false)
-      awaitBatchDeletion(deleteProbe)
-
-      val processor2 = system.actorOf(Props(classOf[ProcessorC], "p12", testActor))
-      expectMsg("offered-a-5")
-      processor2 ! Persistent("b")
-      expectMsg("updated-b-7")
-    }
-
-    "recover from a snapshot without follow-up messages at a partition boundary (where next partition contains a permanently deleted message)" in {
-      val deleteProbe = TestProbe()
-      subscribeToBatchDeletion(deleteProbe)
-
-      val processor1 = system.actorOf(Props(classOf[ProcessorC], "p15", testActor))
-      1L to 5L foreach { i =>
-        processor1 ! Persistent("a")
-        expectMsg(s"updated-a-$i")
-      }
-      processor1 ! "snap"
-      expectMsg("snapped-a-5")
-
-      processor1 ! Persistent("a")
-      expectMsg("updated-a-6")
-
-      processor1 ! Delete(6L, permanent = true)
-      awaitBatchDeletion(deleteProbe)
-
-      val processor2 = system.actorOf(Props(classOf[ProcessorC], "p15", testActor))
-      expectMsg("offered-a-5")
-      processor2 ! Persistent("b")
-      expectMsg("updated-b-6") // sequence number of permanently deleted message can be re-used
     }
   }
 }

@@ -21,7 +21,7 @@ The mongo journal driver is now available on the Maven Central Snapshot Repo.
     resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots"
 
     libraryDependencies ++= Seq(
-      "com.github.ddevore" %% "akka-persistence-mongo-casbah"  % "0.7.2-SNAPSHOT" % "compile")
+      "com.github.ddevore" %% "akka-persistence-mongo-casbah"  % "0.7.3-SNAPSHOT" % "compile")
 
 ### Maven
 
@@ -30,7 +30,7 @@ The mongo journal driver is now available on the Maven Central Snapshot Repo.
     <dependency>
         <groupId>com.github.ddevore</groupId>
         <artifactId>akka-persistence-mongo-casbah_2.10</artifactId>
-        <version>0.7.2-SNAPSHOT</version>
+        <version>0.7.3-SNAPSHOT</version>
     </dependency>
 
 #### Scala 2.11.0
@@ -38,14 +38,14 @@ The mongo journal driver is now available on the Maven Central Snapshot Repo.
     <dependency>
         <groupId>com.github.ddevore</groupId>
         <artifactId>akka-persistence-mongo-casbah_2.11</artifactId>
-        <version>0.7.2-SNAPSHOT</version>
+        <version>0.7.3-SNAPSHOT</version>
     </dependency>
 
 ### Build Locally
 
 Build and install the journal plugin to your local Ivy cache with `sbt publishLocal` (requires sbt 0.13.2). It can then be included as dependency:
 
-    libraryDependencies += "com.github.ddevore" %% "akka-persistence-mongo-casbah" % "0.7.2-SNAPSHOT"
+    libraryDependencies += "com.github.ddevore" %% "akka-persistence-mongo-casbah" % "0.7.3-SNAPSHOT"
 
 ## Journal Configuration
 
@@ -109,7 +109,7 @@ This is an `Int` value that sets the timeout for the snapshot-store write concer
 
 ### casbah.snapshot.mongo-snapshot-load-attempts
 
-Allows for the selection of the youngest of `{n}` snapshots that the match upper bound. This helps where a snapshot may not have persisted correctly because of a JVM crash. As a result an attempt to load the snapshot may fail but an older may succeed. This is an `Int` value that defaults to 3.
+Allows for the selection of the youngest of `{n}` snapshots that match the upper bound. This helps where a snapshot may not have persisted correctly because of a JVM crash. As a result an attempt to load the snapshot may fail but an older may succeed. This is an `Int` value that defaults to 3.
 
 ## Status
 
@@ -118,14 +118,17 @@ Allows for the selection of the youngest of `{n}` snapshots that the match upper
 - When using channels, confirmation writes are batched to optimize throughput.
 - Deletes (marked & permanent) are batched to optimize throughput.
 - Sharding is not yet supported.
-- Akka-Persistence is still considered **experimental** as such the underlying api may change based on user feedback.
+- Akka-Persistence is still considered **experimental** and as such the underlying api may change based on changes to Akka Persistence or user feedback.
 
 ## Performance
 
 Minimal performance testing is included against a **native** instance. In general the journal will persist around 7000 to 8000 messages per second.
 
 ## Example
-We now have an [example application](https://github.com/ddevore/akka-persistence-mongo/tree/master/akka-persistence-mongo-command-sourcing-example-app) that implements Akka-Persistence [command sourcing](http://doc.akka.io/docs/akka/2.3.0/scala/persistence.html#Processors). In this example, the journal acts as a write-ahead-log for whatever `Persistent` messages it recieves. In the future, we will add an application example that implements Akka-Persistence [event sourcing](http://doc.akka.io/docs/akka/2.3.0/scala/persistence.html#Event_sourcing).
+There is an [example application](https://github.com/ddevore/akka-persistence-mongo/tree/master/akka-persistence-mongo-command-sourcing-example-app) that implements Akka-Persistence [command sourcing](http://doc.akka.io/docs/akka/2.3.0/scala/persistence.html#Processors). In this example, the journal acts as a write-ahead-log for whatever persisted messages it recieves. 
+
+There is also an [example application](https://github.com/ddevore/akka-persistence-mongo/tree/master/akka-persistence-mongo-event-sourcing-example-app) that implements Akka-Persistence [event sourcing](http://doc.akka.io/docs/akka/2.3.0/scala/persistence.html#Event_sourcing).
+
 
 ## Author / Maintainer
 

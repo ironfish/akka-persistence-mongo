@@ -15,17 +15,17 @@ trait CasbahRecovery extends AsyncRecovery { this: CasbahJournal ⇒
 
   implicit lazy val replayDispatcher = context.system.dispatchers.lookup(configReplayDispatcher)
 
-  def asyncReplayMessages(processorId: String, fromSequenceNr: Long, toSequenceNr: Long, max: Long)(replayCallback:
+  def asyncReplayMessages(persistenceId: String, fromSequenceNr: Long, toSequenceNr: Long, max: Long)(replayCallback:
       PersistentRepr ⇒ Unit): Future[Unit] = Future {
-    replay(processorId, fromSequenceNr, toSequenceNr, max)(replayCallback)
+    replay(persistenceId, fromSequenceNr, toSequenceNr, max)(replayCallback)
   }
 
-  private def replay(processorId: String, fromSequenceNr: Long, toSequenceNr: Long, max: Long)(replayCallback:
+  private def replay(persistenceId: String, fromSequenceNr: Long, toSequenceNr: Long, max: Long)(replayCallback:
       PersistentRepr => Unit): Unit = {
 
     import com.mongodb.casbah.Implicits._
 
-    val coll = collection.find(replayFindStatement(processorId, fromSequenceNr, toSequenceNr)).sort(recoverySortStatement)
+    val coll = collection.find(replayFindStatement(persistenceId, fromSequenceNr, toSequenceNr)).sort(recoverySortStatement)
     val collSorted = immutable.SortedMap(coll.toList.zipWithIndex.groupBy(x => x._1.as[Long](SequenceNrKey)).toSeq: _*)
     collSorted.flatMap { x =>
       if (x._2.headOption.get._2 < max) {
@@ -37,8 +37,8 @@ trait CasbahRecovery extends AsyncRecovery { this: CasbahJournal ⇒
     } map replayCallback
   }
 
-  override def asyncReadHighestSequenceNr(processorId: String, fromSequenceNr: Long): Future[Long] = Future {
-    val cursor = collection.find(snrQueryStatement(processorId)).sort(maxSnrSortStatement).limit(1)
+  override def asyncReadHighestSequenceNr(persistenceId: String, fromSequenceNr: Long): Future[Long] = Future {
+    val cursor = collection.find(snrQueryStatement(persistenceId)).sort(maxSnrSortStatement).limit(1)
     if (cursor.hasNext) cursor.next().getAs[Long](SequenceNrKey).get else 0L
   }
 }
