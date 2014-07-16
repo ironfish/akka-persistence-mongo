@@ -8,7 +8,7 @@ A replicated [Akka Persistence](http://doc.akka.io/docs/akka/2.3.0/scala/persist
 
 | Technology | Version                          |
 | :--------: | -------------------------------- |
-| Scala      | 2.10.4, 2.11.0 - Cross Compiled  |
+| Scala      | 2.10.4, 2.11.1 - Cross Compiled  |
 | Akka       | 2.3.2 or higher                  |
 | Mongo      | 2.4.8 or higher                  |
 
@@ -33,7 +33,7 @@ The mongo journal driver is now available on the Maven Central Snapshot Repo.
         <version>0.7.3-SNAPSHOT</version>
     </dependency>
 
-#### Scala 2.11.0
+#### Scala 2.11.1
 
     <dependency>
         <groupId>com.github.ddevore</groupId>
