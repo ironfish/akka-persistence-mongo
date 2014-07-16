@@ -12,8 +12,8 @@ object Common {
   def NameEventSourcingExampleApp = Name + "-event-sourcing-example-app"
   def Organization = "com.github.ddevore"
   def ScalaVersion = "2.11.0"
-  def CrossScalaVersions = Seq("2.10.4", "2.11.0")
-  def Version = "0.7.2-SNAPSHOT"
+  def CrossScalaVersions = Seq("2.10.4", "2.11.1")
+  def Version = "0.7.3-SNAPSHOT"
   def ParallelExecutionInTest = false
   def ScalaCOptions = Seq( "-deprecation", "-unchecked", "-feature", "-language:postfixOps" )
   def TestCompile = "test->test;compile->compile"

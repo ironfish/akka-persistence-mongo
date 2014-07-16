@@ -1,6 +1,5 @@
 package org.example
 
-import akka.persistence.ConfirmablePersistent
 import akka.actor.Actor
 import com.novus.salat._
 import com.novus.salat.global._
@@ -19,30 +18,30 @@ class Benefits(mongoHost: String, mongoPort: Int) extends Actor {
   implicit val writeConcern = WriteConcern.JournalSafe
 
   def receive: Actor.Receive = {
-    case p @ ConfirmablePersistent(event, sequenceNr, redeliveries) =>
-      val con = MongoConnection(mongoHost, mongoPort)
+    case Msg(deliveryId, payload) =>
+      val con = MongoClient(mongoHost, mongoPort)
       val col = con("hr")("benefits")
 
-      event match {
+      payload match {
         case cmd: EmployeeHired      =>
           val eb = EmployeeBenefits(cmd.id, cmd.startDate, Nil, Nil)
           val dbo = grater[EmployeeBenefits].asDBObject(eb)
           col.insert(dbo)
-          p.confirm()
+          sender() ! Confirm(deliveryId)
 
         case cmd: EmployeeTerminated =>
           val dbo = col.findOne(MongoDBObject("employeeId" -> cmd.id)).get
           val eb = grater[EmployeeBenefits].asObject(dbo)
           val up = eb.copy(termDates = eb.termDates :+ cmd.termDate)
           col.update(MongoDBObject("employeeId" -> cmd.id), grater[EmployeeBenefits].asDBObject(up))
-          p.confirm()
+          sender() ! Confirm(deliveryId)
 
         case cmd: EmployeeRehired    =>
           val dbo = col.findOne(MongoDBObject("employeeId" -> cmd.id)).get
           val eb = grater[EmployeeBenefits].asObject(dbo)
           val up = eb.copy(rehireDates = eb.rehireDates :+ cmd.rehireDate)
           col.update(MongoDBObject("employeeId" -> cmd.id), grater[EmployeeBenefits].asDBObject(up))
-          p.confirm()
+          sender() ! Confirm(deliveryId)
 
         case _ => // Not interested
       }

@@ -2,10 +2,10 @@ package org.example
 
 import scala.concurrent.duration._
 import scala.concurrent.stm.Ref
-import scala.concurrent.{ Future }
-import akka.actor.{ ActorRef, ActorSystem }
+import scala.concurrent.Future
+import akka.actor.{ActorPath, ActorRef, ActorSystem}
 import akka.pattern.ask
-import akka.persistence.{SnapshotOffer, Deliver, Persistent, Processor}
+import akka.persistence._
 import akka.util.Timeout
 import scalaz._
 import Scalaz._
@@ -249,71 +249,90 @@ case class EmployeeTitleChanged(id: String, title: String, version: Long) extend
 case class EmployeeSalaryChanged(id: String, salary: BigDecimal, version: Long) extends EmployeeEvent
 case class EmployeeDeactivated(id: String, version: Long) extends EmployeeEvent
 case class EmployeeActivated(id: String, version: Long) extends EmployeeEvent
-case class EmployeeTerminated(id: String, termDate: Long, termReason: String, version: Long)
+case class EmployeeTerminated(id: String, termDate: Long, termReason: String, version: Long) extends EmployeeEvent
 case class EmployeeRehired(id: String, rehireDate: Long, version: Long) extends EmployeeEvent
 case class EmployeePaid(id: String, salary: BigDecimal, version: Long) extends EmployeeEvent
 
-sealed trait EmployeeMessage
-case class SnapshotEmployee(id: String) extends EmployeeMessage
+sealed trait SnapshotEvent
+case class SnapshotEmployee(id: String) extends SnapshotEvent
 
 /**
  * This is the command sourcing processor for employees.
  * @param ref Ref[Map[String, Employee]] the in memory current state of all employees.
- * @param eventChannel ActorRef the channel to be used for sending events.
- * @param eventDestination ActorRef the listener of the events.
+ * @param eventDestination ActorPath the listener of the events.
  */
-class EmployeeProcessor(ref: Ref[Map[String, Employee]], eventChannel: ActorRef, eventDestination: ActorRef) extends Processor {
+class EmployeeProcessor(ref: Ref[Map[String, Employee]], eventDestination: ActorPath)
+  extends PersistentActor
+  with AtLeastOnceDelivery {
 
-  def receive = {
-    case p @ Persistent(cmd: EmployeeCommand, sequenceNr: Long) =>
+  override def persistenceId = "employee-persistence"
+
+  val receiveCommand: Receive = {
+    case cmd =>
       cmd match {
         case cmd: HireEmployee => process(hire(cmd)) { emp ⇒
-          eventChannel ! Deliver(p.withPayload(EmployeeHired(emp.id, emp.lastName, emp.firstName, emp.address.line1, emp.address.line2,
-            emp.address.city, emp.address.stateOrProvince, emp.address.country, emp.address.postalCode, emp.startDate, emp.dept, emp.title, emp.salary, emp.version)), eventDestination.path)
+          persist(EmployeeHired(emp.id, emp.lastName, emp.firstName, emp.address.line1, emp.address.line2, emp.address.city,emp.address.stateOrProvince, emp.address.country, emp.address.postalCode, emp.startDate, emp.dept, emp.title, emp.salary, emp.version))(updateState)
         }
         case cmd: ChangeEmployeeLastName => process(changeLastName(cmd)) { emp ⇒
-          eventChannel ! Deliver(p.withPayload(EmployeeLastNameChanged(emp.id, emp.lastName, emp.version)), eventDestination.path)
+          persist(EmployeeLastNameChanged(emp.id, emp.lastName, emp.version))(updateState)
         }
         case cmd: ChangeEmployeeFirstName => process(changeFirstName(cmd)) { emp ⇒
-          eventChannel ! Deliver(p.withPayload(EmployeeFirstNameChanged(emp.id, emp.firstName, emp.version)), eventDestination.path)
+          persist(EmployeeFirstNameChanged(emp.id, emp.firstName, emp.version))(updateState)
         }
         case cmd: ChangeEmployeeStartDate => process(changeStartDate(cmd)) { emp ⇒
-          eventChannel ! Deliver(p.withPayload(EmployeeStartDateChanged(emp.id, emp.startDate, emp.version)), eventDestination.path)
+          persist(EmployeeStartDateChanged(emp.id, emp.startDate, emp.version))(updateState)
         }
         case cmd: ChangeEmployeeDept => process(changeDept(cmd)) { emp ⇒
-          eventChannel ! Deliver(p.withPayload(EmployeeDeptChanged(emp.id, emp.dept, emp.version)), eventDestination.path)
+          persist(EmployeeDeptChanged(emp.id, emp.dept, emp.version))(updateState)
         }
         case cmd: ChangeEmployeeTitle => process(changeTitle(cmd)) { emp ⇒
-          eventChannel ! Deliver(p.withPayload(EmployeeTitleChanged(emp.id, emp.title, emp.version)), eventDestination.path)
+          persist(EmployeeTitleChanged(emp.id, emp.title, emp.version))(updateState)
         }
         case cmd: ChangeEmployeeSalary => process(changeSalary(cmd)) { emp ⇒
-          eventChannel ! Deliver(p.withPayload(EmployeeSalaryChanged(emp.id, emp.salary, emp.version)), eventDestination.path)
+          persist(EmployeeSalaryChanged(emp.id, emp.salary, emp.version))(updateState)
         }
         case cmd: ChangeEmployeeAddress => process(changeAddress(cmd)) { emp ⇒
-          eventChannel ! Deliver(p.withPayload(EmployeeAddressChanged(emp.id, emp.address.line1, emp.address.line2, emp.address.city, emp.address.stateOrProvince,
-            emp.address.postalCode, emp.address.country, emp.version)), eventDestination.path)
+          persist(EmployeeAddressChanged(emp.id, emp.address.line1, emp.address.line2, emp.address.city, emp.address.stateOrProvince,
+            emp.address.postalCode, emp.address.country, emp.version))(updateState)
         }
         case cmd: DeactivateEmployee => process(deactivate(cmd)) { emp ⇒
-          eventChannel ! Deliver(p.withPayload(EmployeeDeactivated(emp.id, emp.version)), eventDestination.path)
+          persist(EmployeeDeactivated(emp.id, emp.version))(updateState)
         }
         case cmd: ActivateEmployee => process(activate(cmd)) { emp ⇒
-          eventChannel ! Deliver(p.withPayload(EmployeeActivated(emp.id, emp.version)), eventDestination.path)
+          persist(EmployeeActivated(emp.id, emp.version))(updateState)
         }
         case cmd: TerminateEmployee => process(terminate(cmd)) { emp ⇒
-          eventChannel ! Deliver(p.withPayload(EmployeeTerminated(emp.id, cmd.termDate, cmd.termReason, emp.version)), eventDestination.path)
+          persist(EmployeeTerminated(emp.id, cmd.termDate, cmd.termReason, emp.version))(updateState)
         }
         case cmd: RehireEmployee => process(rehire(cmd)) { emp ⇒
-          eventChannel ! Deliver(p.withPayload(EmployeeRehired(emp.id, cmd.rehireDate, emp.version)), eventDestination.path)
+          persist(EmployeeRehired(emp.id, cmd.rehireDate, emp.version))(updateState)
         }
         case cmd: RunPayroll =>
           readEmployees.values.filter(_.isInstanceOf[ActiveEmployee]).foreach { e =>
-            eventChannel ! Deliver(p.withPayload(EmployeePaid(e.id, e.salary, e.version)), eventDestination.path)
+            persist(EmployeePaid(e.id, e.salary, e.version))(updateState)
           }
+        case SnapshotEmployee(id) ⇒
+          saveSnapshot(readEmployees.get(id).get)
+        case Confirm(deliveryId) ⇒
+          persist(MsgConfirmed(deliveryId)){evt =>
+            confirmDelivery(deliveryId)
+            context.system.eventStream.publish(evt)
+          }
+        case SaveSnapshotSuccess(snap) =>
+          context.system.eventStream.publish(SnapshotConfirmed(snap))
       }
+  }
 
-      case SnapshotEmployee(id)                                   => saveSnapshot(readEmployees.get(id).get)
+  /**
+   * Delivers the event to the destination.
+   * @param evt event to deliver
+   */
+  def updateState(evt: EmployeeEvent): Unit = evt match {
+    case e:EmployeeEvent ⇒ deliver(eventDestination, deliveryId ⇒ Msg(deliveryId, evt))
+  }
 
-      case SnapshotOffer(metadata, offeredSnapshot)               => updateEmployees(offeredSnapshot.asInstanceOf[Employee])
+  val receiveRecover: Receive = {
+    case SnapshotOffer(metadata, offeredSnapshot) => updateEmployees(offeredSnapshot.asInstanceOf[Employee])
   }
 
   def hire(cmd: HireEmployee): DomainValidation[ActiveEmployee] =
@@ -370,15 +389,13 @@ class EmployeeProcessor(ref: Ref[Map[String, Employee]], eventChannel: ActorRef,
         current ← Employee.requireVersion(emp, expectedVersion)
         updated ← f(emp)
       } yield updated
-      case None ⇒ s"employee ${id} does not exist".failNel
+      case None ⇒ s"employee $id does not exist".failNel
     }
 
   def updateActive[B <: Employee](id: String, version: Long)(f: ActiveEmployee ⇒ DomainValidation[B]): DomainValidation[B] =
-    updateEmployee(id, version) { e ⇒
-      e match {
-        case emp: ActiveEmployee  ⇒ f(emp)
-        case emp: Employee ⇒ "EmployeeNotActive".failNel
-      }
+    updateEmployee(id, version) {
+      case emp: ActiveEmployee ⇒ f(emp)
+      case emp: Employee ⇒ "EmployeeNotActive".failNel
     }
 
   def updateInactive[B <: Employee](id: String, version: Long)(f: InactiveEmployee ⇒ DomainValidation[B]): DomainValidation[B] =
@@ -388,11 +405,9 @@ class EmployeeProcessor(ref: Ref[Map[String, Employee]], eventChannel: ActorRef,
     }
 
   def updateTermination[B <: Employee](id: String, version: Long)(f: Termination ⇒ DomainValidation[B]): DomainValidation[B] =
-    updateEmployee(id, version) { e ⇒
-      e match {
-        case emp: Termination  ⇒ f(emp)
-        case emp: Employee ⇒ "EmployeeNotTerminated".failNel
-      }
+    updateEmployee(id, version) {
+      case emp: Termination  ⇒ f(emp)
+      case emp: Employee ⇒ "EmployeeNotTerminated".failNel
     }
 
   private def updateEmployees(employee: Employee) {
@@ -412,7 +427,7 @@ class EmployeeService(ref: Ref[Map[String, Employee]], processor: ActorRef)(impl
 
   implicit val timeout = Timeout(5 seconds)
 
-  def sendCommand(cmd: EmployeeCommand): Future[DomainValidation[Employee]] = processor ? Persistent(cmd) map (_.asInstanceOf[DomainValidation[Employee]])
+  def sendCommand(cmd: EmployeeCommand): Future[DomainValidation[Employee]] = processor ? cmd map (_.asInstanceOf[DomainValidation[Employee]])
 
   def getMap = ref.single.get
 

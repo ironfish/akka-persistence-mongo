@@ -11,13 +11,13 @@ import com.mongodb.casbah.Imports._
 
 private[mongo] trait CasbahSnapshotHelper extends MongoPersistenceSnapshotRoot {
 
-  val ProcessorIdKey = "processorId"
+  val PersistenceIdKey = "persistenceId"
   val SequenceNrKey = "sequenceNr"
   val TimestampKey = "timestamp"
   val SnapshotKey = "snapshot"
 
   private[this] val snapIdx1 = MongoDBObject(
-    "processorId"         -> 1,
+    "persistenceId"       -> 1,
     "sequenceNr"          -> 1,
     "timestamp"           -> 1)
 
@@ -33,7 +33,7 @@ private[mongo] trait CasbahSnapshotHelper extends MongoPersistenceSnapshotRoot {
 
   def writeJSON(snapshot: SelectedSnapshot) = {
     val builder = MongoDBObject.newBuilder
-    builder += ProcessorIdKey -> snapshot.metadata.processorId
+    builder += PersistenceIdKey -> snapshot.metadata.persistenceId
     builder += SequenceNrKey  -> snapshot.metadata.sequenceNr
     builder += TimestampKey   -> snapshot.metadata.timestamp
     builder += SnapshotKey    -> toBytes(snapshot)
@@ -41,20 +41,20 @@ private[mongo] trait CasbahSnapshotHelper extends MongoPersistenceSnapshotRoot {
   }
 
   def delStatement(meta: SnapshotMetadata): MongoDBObject =
-    MongoDBObject(ProcessorIdKey -> meta.processorId, SequenceNrKey -> meta.sequenceNr, TimestampKey -> meta.timestamp)
+    MongoDBObject(PersistenceIdKey -> meta.persistenceId, SequenceNrKey -> meta.sequenceNr, TimestampKey -> meta.timestamp)
 
-  def delStatement(processorId: String, criteria: SnapshotSelectionCriteria): MongoDBObject =
-    maxSnrMaxTimeQueryStatement(processorId, criteria)
+  def delStatement(persistenceId: String, criteria: SnapshotSelectionCriteria): MongoDBObject =
+    maxSnrMaxTimeQueryStatement(persistenceId, criteria)
 
-  def snapshotsQueryStatement(processorId: String, criteria: SnapshotSelectionCriteria): MongoDBObject =
-    maxSnrMaxTimeQueryStatement(processorId, criteria)
+  def snapshotsQueryStatement(persistenceId: String, criteria: SnapshotSelectionCriteria): MongoDBObject =
+    maxSnrMaxTimeQueryStatement(persistenceId, criteria)
 
   def snapshotsSortStatement: MongoDBObject =
     MongoDBObject(SequenceNrKey -> -1, TimestampKey -> -1)
 
-  private def maxSnrMaxTimeQueryStatement(processorId: String, criteria: SnapshotSelectionCriteria): MongoDBObject =
+  private def maxSnrMaxTimeQueryStatement(persistenceId: String, criteria: SnapshotSelectionCriteria): MongoDBObject =
     MongoDBObject(
-      ProcessorIdKey -> processorId,
+      PersistenceIdKey -> persistenceId,
       SequenceNrKey  -> MongoDBObject("$lte" -> criteria.maxSequenceNr),
       TimestampKey   -> MongoDBObject("$lte" -> criteria.maxTimestamp)
     )

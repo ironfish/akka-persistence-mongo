@@ -11,7 +11,7 @@ import akka.persistence.mongo.MongoPersistenceJournalRoot
 
 private[mongo] trait CasbahJournalHelper extends MongoPersistenceJournalRoot {
 
-  val ProcessorIdKey = "processorId"
+  val PersistenceIdKey = "persistenceId"
   val SequenceNrKey = "sequenceNr"
   val AggIdKey = "_id"
   val AddDetailsKey = "details"
@@ -25,7 +25,7 @@ private[mongo] trait CasbahJournalHelper extends MongoPersistenceJournalRoot {
   val MarkerDelete = "D"
 
   private[this] val idx1 = MongoDBObject(
-    "processorId"         -> 1,
+    "persistenceId"         -> 1,
     "sequenceNr"          -> 1,
     "marker"              -> 1)
 
@@ -33,7 +33,7 @@ private[mongo] trait CasbahJournalHelper extends MongoPersistenceJournalRoot {
     MongoDBObject("unique" -> true)
 
   private[this] val idx2 = MongoDBObject(
-    "processorId"         -> 1,
+    "persistenceId"         -> 1,
     "sequenceNr"          -> 1)
 
   private[this] val idx3 =
@@ -50,7 +50,7 @@ private[mongo] trait CasbahJournalHelper extends MongoPersistenceJournalRoot {
 
   def writeJSON(pId: String, sNr: Long, pr: PersistentRepr) = {
     val builder = MongoDBObject.newBuilder
-    builder += ProcessorIdKey -> pId
+    builder += PersistenceIdKey -> pId
     builder += SequenceNrKey  -> sNr
     builder += MarkerKey      -> MarkerAccepted
     builder += MessageKey     -> toBytes(pr)
@@ -59,7 +59,7 @@ private[mongo] trait CasbahJournalHelper extends MongoPersistenceJournalRoot {
 
   def confirmJSON(pId: String, sNr: Long, cId: String) = {
     val builder = MongoDBObject.newBuilder
-    builder += ProcessorIdKey -> pId
+    builder += PersistenceIdKey -> pId
     builder += SequenceNrKey  -> sNr
     builder += MarkerKey      -> markerConfirm(cId)
     builder += MessageKey     -> Array.empty[Byte]
@@ -68,36 +68,36 @@ private[mongo] trait CasbahJournalHelper extends MongoPersistenceJournalRoot {
 
   def deleteMarkJSON(pId: String, sNr: Long) = {
     val builder = MongoDBObject.newBuilder
-    builder += ProcessorIdKey -> pId
+    builder += PersistenceIdKey -> pId
     builder += SequenceNrKey  -> sNr
     builder += MarkerKey      -> MarkerDelete
     builder += MessageKey     -> Array.empty[Byte]
     builder.result()
   }
 
-  def delStatement(processorId: String, sequenceNr: Long): MongoDBObject =
-    MongoDBObject(ProcessorIdKey -> processorId, SequenceNrKey -> sequenceNr)
+  def delStatement(persistenceId: String, sequenceNr: Long): MongoDBObject =
+    MongoDBObject(PersistenceIdKey -> persistenceId, SequenceNrKey -> sequenceNr)
 
-  def delToStatement(processorId: String, toSequenceNr: Long): MongoDBObject =
+  def delToStatement(persistenceId: String, toSequenceNr: Long): MongoDBObject =
     MongoDBObject(
-      ProcessorIdKey -> processorId,
+      PersistenceIdKey -> persistenceId,
       SequenceNrKey  -> MongoDBObject("$lte" -> toSequenceNr))
 
   def delOrStatement(elements: List[MongoDBObject]): MongoDBObject =
     MongoDBObject("$or" -> elements)
 
-  def replayFindStatement(processorId: String, fromSequenceNr: Long, toSequenceNr: Long): MongoDBObject =
+  def replayFindStatement(persistenceId: String, fromSequenceNr: Long, toSequenceNr: Long): MongoDBObject =
     MongoDBObject(
-      ProcessorIdKey -> processorId,
+      PersistenceIdKey -> persistenceId,
       SequenceNrKey  -> MongoDBObject("$gte" -> fromSequenceNr, "$lte" -> toSequenceNr))
 
   def recoverySortStatement = MongoDBObject(
-    "processorId" -> 1,
+    "persistenceId" -> 1,
     "sequenceNr"  -> 1,
     "marker"      -> 1)
 
-  def snrQueryStatement(processorId: String): MongoDBObject =
-    MongoDBObject(ProcessorIdKey -> processorId)
+  def snrQueryStatement(persistenceId: String): MongoDBObject =
+    MongoDBObject(PersistenceIdKey -> persistenceId)
 
   def maxSnrSortStatement: MongoDBObject =
     MongoDBObject(SequenceNrKey -> -1)

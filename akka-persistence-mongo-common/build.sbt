@@ -24,8 +24,8 @@ pomExtra := Common.PomXtra
 libraryDependencies ++= Seq(
   "ch.qos.logback"       % "logback-classic"                % "1.1.1"     % "compile",
   "commons-io"           % "commons-io"                     % "2.4"       % "test",
-  "com.typesafe.akka"   %% "akka-testkit"                   % "2.3.2"     % "test",
-  "com.typesafe.akka"   %% "akka-persistence-experimental"  % "2.3.2"     % "compile",
+  "com.typesafe.akka"   %% "akka-testkit"                   % "2.3.4"     % "test",
+  "com.typesafe.akka"   %% "akka-persistence-experimental"  % "2.3.4"     % "compile",
   "de.flapdoodle.embed"  % "de.flapdoodle.embed.mongo"      % "1.43"      % "test",
   "org.scalatest"       %% "scalatest"                      % "2.1.3"     % "test"
 )

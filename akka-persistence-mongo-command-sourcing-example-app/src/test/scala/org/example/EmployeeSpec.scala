@@ -4,7 +4,6 @@ import concurrent.duration._
 import org.scalatest._
 import akka.actor.{PoisonPill, ActorRef, Props, ActorSystem}
 import scala.concurrent.stm.Ref
-import akka.persistence.Channel
 import scala.concurrent.Await
 import akka.testkit.{TestProbe, TestKit}
 import de.flapdoodle.embed.process.runtime.Network
@@ -26,7 +25,10 @@ import com.novus.salat.global._
  * an employee.  Recover is also demonstrated.
  */
 class EmployeeSpec extends TestKit(ActorSystem("test", EmployeeSpec.config(EmployeeSpec.freePort)))
-  with WordSpecLike with MustMatchers with BeforeAndAfterAll with BeforeAndAfterEach {
+  with WordSpecLike
+  with MustMatchers
+  with BeforeAndAfterAll
+  with BeforeAndAfterEach {
 
   import EmployeeSpec._
 
@@ -71,7 +73,7 @@ class EmployeeSpec extends TestKit(ActorSystem("test", EmployeeSpec.config(Emplo
   val duration = 10.seconds
 
   var ref: Ref[Map[String, Employee]] = _
-  var benefitsChannel, employeeProcessor, benefits: ActorRef = _
+  var employeeProcessor, benefits: ActorRef = _
   var employeeService: EmployeeService = _
 
   val Id = "111-222-3333"
@@ -90,17 +92,17 @@ class EmployeeSpec extends TestKit(ActorSystem("test", EmployeeSpec.config(Emplo
   val TermDateApril1_2014 = 1396396800000L
   val RehireDateMay1_2014 =  1398902400000L
 
-  override def beforeAll: Unit = {
+  override def beforeAll(): Unit = {
     // Here we essentially bootstrap our test application.
     mongodExe
-    benefitsChannel = system.actorOf(Channel.props(), name = "benefits-channel")
     ref = Ref(Map.empty[String, Employee])
     benefits = system.actorOf(Props(new Benefits("localhost", freePort)), name = "benefits")
-    employeeProcessor = system.actorOf(Props(new EmployeeProcessor(ref, benefitsChannel, benefits)), name = "employee-processor")
+
+    employeeProcessor = system.actorOf(Props(new EmployeeProcessor(ref, benefits.path)), name = "employee-processor")
     employeeService = new EmployeeService(ref, employeeProcessor)
   }
 
-  override def afterAll: Unit = {
+  override def afterAll(): Unit = {
     // Cleanup
     system.shutdown()
     system.awaitTermination(10.seconds)
@@ -108,14 +110,20 @@ class EmployeeSpec extends TestKit(ActorSystem("test", EmployeeSpec.config(Emplo
     mongodExe.stop()
   }
 
+  def subscribeToEventStream(probe: TestProbe, clazz: Class[_]) = system.eventStream.subscribe(probe.ref, clazz)
+
   "The Application" must {
     "hire a new employee and update CQRS read side benefits persistence" in {
+      val confirmProbe = TestProbe()
+      subscribeToEventStream(confirmProbe, classOf[MsgConfirmed])
+
       Await.result(employeeService.sendCommand(HireEmployee(Id, LastName, FirstName, Line1, Line2, City, State, Country,
         Postal, StartDateMarch1_2014, Dept, Title, BigDecimal(50000))), duration).isSuccess must be(right = true)
       employeeService.getAll.size must be(1)
       employeeService.getAllActive.size must be(1)
 
-      val con = MongoConnection("localhost", freePort)
+      val con = MongoClient("localhost", freePort)
+
       val col = con("hr")("benefits")
       val Expected = Some(EmployeeBenefits(Id, StartDateMarch1_2014, Nil, Nil))
 
@@ -125,6 +133,8 @@ class EmployeeSpec extends TestKit(ActorSystem("test", EmployeeSpec.config(Emplo
         else if (Some(grater[EmployeeBenefits].asObject(dbo.get)) == Expected) true
         else false
       }, duration, 100 milliseconds, "Benefits read side failure.")
+
+      confirmProbe.expectMsgClass(3 seconds, classOf[MsgConfirmed])
     }
 
     "fail change the employee last name with null and receive validation" in {
@@ -140,12 +150,15 @@ class EmployeeSpec extends TestKit(ActorSystem("test", EmployeeSpec.config(Emplo
     }
 
     "terminate the employee and update CQRS read side benefits persistence" in {
+      val confirmProbe = TestProbe()
+      subscribeToEventStream(confirmProbe, classOf[MsgConfirmed])
+
       Await.result(employeeService.sendCommand(TerminateEmployee(Id, TermDateApril1_2014, "too studly", 1L)), duration).isSuccess must be(right = true)
       employeeService.getAll.size must be(1)
       employeeService.getAllActive.size must be(0)
       employeeService.getAllTerminated.size must be(1)
 
-      val con = MongoConnection("localhost", freePort)
+      val con = MongoClient("localhost", freePort)
       val col = con("hr")("benefits")
       val Expected = Some(EmployeeBenefits(Id, StartDateMarch1_2014, List(TermDateApril1_2014), Nil))
 
@@ -155,16 +168,21 @@ class EmployeeSpec extends TestKit(ActorSystem("test", EmployeeSpec.config(Emplo
         else if (Some(grater[EmployeeBenefits].asObject(dbo.get)) == Expected) true
         else false
       }, duration, 100 milliseconds, "Benefits read side failure.")
+
+      confirmProbe.expectMsgClass(3 seconds, classOf[MsgConfirmed])
     }
 
     "rehire the employee and update CQRS read side benefits persistence" in {
+      val confirmProbe = TestProbe()
+      subscribeToEventStream(confirmProbe, classOf[MsgConfirmed])
+
       val res = Await.result(employeeService.sendCommand(RehireEmployee(Id, RehireDateMay1_2014, 2L)), duration)
       res.isSuccess must be(right = true)
       employeeService.getAll.size must be(1)
       employeeService.getAllActive.size must be(1)
       employeeService.getAllTerminated.size must be(0)
 
-      val con = MongoConnection("localhost", freePort)
+      val con = MongoClient("localhost", freePort)
       val col = con("hr")("benefits")
       val Expected = Some(EmployeeBenefits(Id, StartDateMarch1_2014, List(TermDateApril1_2014), List(RehireDateMay1_2014)))
 
@@ -174,33 +192,34 @@ class EmployeeSpec extends TestKit(ActorSystem("test", EmployeeSpec.config(Emplo
         else if (Some(grater[EmployeeBenefits].asObject(dbo.get)) == Expected) true
         else false
       }, duration, 100 milliseconds, "Benefits read side failure.")
+
+      confirmProbe.expectMsgClass(3 seconds, classOf[MsgConfirmed])
     }
 
     "snapshot the employee" in {
+      val confirmProbe = TestProbe()
+      subscribeToEventStream(confirmProbe, classOf[SnapshotConfirmed])
+
       employeeProcessor ! SnapshotEmployee(Id)
-      Thread.sleep(1000)
+      confirmProbe.expectMsgAllClassOf(3 seconds, classOf[SnapshotConfirmed])
     }
 
     "recover with no updates to CQRS read side benefits persistence" in {
       // Kill off old persistence infrastructure.
-      val probe1, probe2, probe3 = TestProbe()
-      probe1 watch benefitsChannel
-      probe2 watch benefits
-      probe3 watch employeeProcessor
-      benefitsChannel ! PoisonPill
+      val probe1, probe2 = TestProbe()
+      probe1 watch benefits
+      probe2 watch employeeProcessor
       benefits ! PoisonPill
       employeeProcessor ! PoisonPill
-      probe1.expectTerminated(benefitsChannel)
-      probe2.expectTerminated(benefits)
-      probe3.expectTerminated(employeeProcessor)
+      probe1.expectTerminated(benefits)
+      probe2.expectTerminated(employeeProcessor)
 
       // Reinitialize persistence infrastructure and ensure recovery.
       ref = Ref(Map.empty[String, Employee])
-      benefitsChannel = system.actorOf(Channel.props(), name = "benefits-channel")
       val probe4 = TestProbe()
       benefits = system.actorOf(Props(new Benefits("localhost", freePort)), name = "benefits")
       probe4 watch benefits
-      employeeProcessor = system.actorOf(Props(new EmployeeProcessor(ref, benefitsChannel, benefits)), name = "employee-processor")
+      employeeProcessor = system.actorOf(Props(new EmployeeProcessor(ref, benefits.path)), name = "employee-processor")
       employeeService = new EmployeeService(ref, employeeProcessor)
       awaitCond(ref.single.get.values.size == 1, duration, 100 milliseconds, "Employees did not recover.")
       probe4.expectNoMsg(500 milliseconds)

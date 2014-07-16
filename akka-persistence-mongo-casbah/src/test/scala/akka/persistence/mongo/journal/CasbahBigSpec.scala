@@ -31,21 +31,20 @@ object CasbahBigSpec {
        |casbah-snapshot-store.mongo-snapshot-write-concern-timeout = 10000
      """.stripMargin)
 
-   case class Delete(snr: Long, permanent: Boolean)
-   case class DeleteTo(snr: Long, permanent: Boolean)
+  class ProcessorA(val persistenceId: String) extends PersistentActor {
+      def receiveRecover: Receive = handle
 
-   class ProcessorA(override val processorId: String) extends Processor {
-     def receive = {
-       case Persistent(payload, sequenceNr) =>
-         sender ! payload
-         sender ! sequenceNr
-         sender ! recoveryRunning
-       case Delete(sequenceNr, permanent) =>
-         deleteMessage(sequenceNr, permanent)
-       case DeleteTo(sequenceNr, permanent) =>
-         deleteMessages(sequenceNr, permanent)
-     }
-   }
+      def receiveCommand: Receive = {
+        case payload: String => persist(payload)(handle)
+      }
+
+      def handle: Receive = {
+        case payload: String =>
+          sender ! payload
+          sender ! lastSequenceNr
+          sender ! recoveryRunning
+      }
+    }
 }
 
 import CasbahBigSpec._
@@ -61,20 +60,21 @@ class CasbahBigSpec extends TestKit(ActorSystem("test", config(freePort)))
 
    "A Casbah journal" should {
 
-     "write and replay 100K+ messages" ignore {
+     "write and replay 10K messages" in {
        val processor1 = system.actorOf(Props(classOf[ProcessorA], "p1"))
-       1L to 160000L foreach { i =>
-         processor1 ! Persistent(s"a-$i")
+       1L to 10000L foreach { i =>
+         processor1 ! s"a-$i"
          expectMsgAllOf(3.seconds, s"a-$i", i, false)
        }
 
        val processor2 = system.actorOf(Props(classOf[ProcessorA], "p1"))
-       1L to 160000L foreach { i =>
-         expectMsgAllOf(s"a-$i", i, true)
+       1L to 10000L foreach { i =>
+         expectMsgAllOf(10.seconds, s"a-$i", i, true)
        }
 
-       processor2 ! Persistent("b")
-       expectMsgAllOf("b", 160001L, false)
+       processor2 ! "b"
+       expectMsgAllOf("b", 10001L, false)
      }
    }
 }
+
