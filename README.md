@@ -73,7 +73,7 @@ As a result only the following write concerns are supported:
 
 The default write concern is `journaled` [JournalSafe]. To better understand MongoDB `WriteConcern` see [Write Concern](http://docs.mongodb.org/manual/core/write-concern/).
 
-### casbah.journal.mongo-journal-write-concern-timeout
+### casbah-journal.mongo-journal-write-concern-timeout
 
 This is an `Int` value that sets the timeout for the journal write concern. The default is 10000 millis [10 Seconds].
 
@@ -103,11 +103,11 @@ As a result only the following write concerns are supported:
 
 The default write concern is `journaled` [JournalSafe]. To better understand MongoDB `WriteConcern` see [Write Concern](http://docs.mongodb.org/manual/core/write-concern/).
 
-### casbah.snapshot.mongo-snapshot-write-concern-timeout
+### casbah-snapshot.mongo-snapshot-write-concern-timeout
 
 This is an `Int` value that sets the timeout for the snapshot-store write concern. The default is 10000 millis [10 Seconds].
 
-### casbah.snapshot.mongo-snapshot-load-attempts
+### casbah-snapshot.mongo-snapshot-load-attempts
 
 Allows for the selection of the youngest of `{n}` snapshots that match the upper bound. This helps where a snapshot may not have persisted correctly because of a JVM crash. As a result an attempt to load the snapshot may fail but an older may succeed. This is an `Int` value that defaults to 3.
 
