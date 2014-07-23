@@ -89,7 +89,7 @@ This will run the snapshot-store with its default settings. The default settings
 
 A comma-separated list of Mongo hosts. You can specify as many hosts as necessary, for example, connections to replica sets. The default value is `mongodb://localhost:27017/store.snapshots`. For more information on configuring the `mongo-url` see [Connection String Uri Format](http://docs.mongodb.org/manual/reference/connection-string/).
 
-### casbah-snapshot.mongo-snapshot-write-concern
+### casbah-snapshot-store.mongo-snapshot-write-concern
 
 A snapshot-store must support the following akka-persistence property:
 
@@ -103,11 +103,11 @@ As a result only the following write concerns are supported:
 
 The default write concern is `journaled` [JournalSafe]. To better understand MongoDB `WriteConcern` see [Write Concern](http://docs.mongodb.org/manual/core/write-concern/).
 
-### casbah-snapshot.mongo-snapshot-write-concern-timeout
+### casbah-snapshot-store.mongo-snapshot-write-concern-timeout
 
 This is an `Int` value that sets the timeout for the snapshot-store write concern. The default is 10000 millis [10 Seconds].
 
-### casbah-snapshot.mongo-snapshot-load-attempts
+### casbah-snapshot-store.mongo-snapshot-load-attempts
 
 Allows for the selection of the youngest of `{n}` snapshots that match the upper bound. This helps where a snapshot may not have persisted correctly because of a JVM crash. As a result an attempt to load the snapshot may fail but an older may succeed. This is an `Int` value that defaults to 3.
 
