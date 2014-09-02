@@ -26,8 +26,8 @@ private[mongo] trait CasbahSnapshotHelper extends MongoPersistenceSnapshotRoot {
 
   private[this] val uri = MongoClientURI(configMongoSnapshotUrl)
   val client =  MongoClient(uri)
-  private[this] val db = client(uri.database.get)
-  val collection = db(uri.collection.get)
+  private[this] val db = client(uri.database.getOrElse(throw new Exception("Cannot get database out of the mongodb URI, probably invalid format")))
+  val collection = db(uri.collection.getOrElse(throw new Exception("Cannot get collection out of the mongodb URI, probably invalid format")))
 
   collection.ensureIndex(snapIdx1, snapIdx1Options)
 
