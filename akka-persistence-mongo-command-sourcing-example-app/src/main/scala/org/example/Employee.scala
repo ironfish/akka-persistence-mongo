@@ -32,7 +32,7 @@ sealed trait Employee {
 object Employee {
   def requireVersion[T <: Employee](emp: T, expectedVersion: Long): DomainValidation[T] = {
     if (expectedVersion == emp.version) emp.successNel
-    else "ExpectedVersionMismatch".failNel
+    else "ExpectedVersionMismatch".failureNel
   }
 }
 
@@ -73,25 +73,25 @@ case class ActiveEmployee private (
   import CommonValidations._
 
   def withLastName(lastName: String): DomainValidation[ActiveEmployee] =
-    checkString(lastName).fold(e => e.failNel, l => copy(version = version + 1, lastName = l).success)
+    checkString(lastName).fold(e => e.failureNel, l => copy(version = version + 1, lastName = l).success)
 
   def withFirstName(firstName: String): DomainValidation[ActiveEmployee] =
-    checkString(lastName).fold(e => e.failNel, f => copy(version = version + 1, firstName = f).success)
+    checkString(lastName).fold(e => e.failureNel, f => copy(version = version + 1, firstName = f).success)
 
   def withAddress(line1: String, line2: String, city: String, stateOrProvince: String, country: String, postalCode: String): DomainValidation[ActiveEmployee] =
-    Address.create(line1, line2, city, stateOrProvince, country, postalCode).fold(e => e.fail, a => copy(version = version + 1, address = a).success)
+    Address.create(line1, line2, city, stateOrProvince, country, postalCode).fold(e => e.failure, a => copy(version = version + 1, address = a).success)
 
   def withStartDate(startDate: Long): DomainValidation[ActiveEmployee] =
-    checkStartDate(startDate).fold(e => e.failNel, s => copy(version = version + 1, startDate = s).success)
+    checkStartDate(startDate).fold(e => e.failureNel, s => copy(version = version + 1, startDate = s).success)
 
   def withDept(dept: String): DomainValidation[ActiveEmployee] =
-    checkString(dept).fold(e => e.failNel, d => copy(version = version + 1, dept = d).success)
+    checkString(dept).fold(e => e.failureNel, d => copy(version = version + 1, dept = d).success)
 
   def withTitle(title: String): DomainValidation[ActiveEmployee] =
-    checkString(dept).fold(e => e.failNel, t => copy(version = version + 1, title = t).success)
+    checkString(dept).fold(e => e.failureNel, t => copy(version = version + 1, title = t).success)
 
   def withSalary(salary: BigDecimal): DomainValidation[ActiveEmployee] =
-    checkSalary(salary).fold(e => e.failNel, s => copy(version = version + 1, salary = s).success)
+    checkSalary(salary).fold(e => e.failureNel, s => copy(version = version + 1, salary = s).success)
 
   def leaveOfAbsence: DomainValidation[InactiveEmployee] =
     InactiveEmployee.create(this)
@@ -337,7 +337,7 @@ class EmployeeProcessor(ref: Ref[Map[String, Employee]], eventDestination: Actor
 
   def hire(cmd: HireEmployee): DomainValidation[ActiveEmployee] =
     readEmployees.values.find(emp ⇒ emp.id == cmd.id) match {
-      case Some(emp) ⇒ "EmployeeExists".failNel
+      case Some(emp) ⇒ "EmployeeExists".failureNel
       case None ⇒ ActiveEmployee.create(cmd.id, cmd.lastName, cmd.firstName, cmd.addressLine1, cmd.addressLine2, cmd.city, cmd.stateOrProvince,
         cmd.country, cmd.postalCode, cmd.startDate, cmd.dept, cmd.title, cmd.salary, -1L)
     }
@@ -383,31 +383,33 @@ class EmployeeProcessor(ref: Ref[Map[String, Employee]], eventDestination: Actor
     sender ! validation
   }
 
-  def updateEmployee[B <: Employee](id: String, expectedVersion: Long)(f: Employee ⇒ DomainValidation[B]): DomainValidation[B] =
+  def updateEmployee[B <: Employee](id: String, expectedVersion: Long)(fn: Employee ⇒ DomainValidation[B]): DomainValidation[B] =
     readEmployees.get(id) match {
-      case Some(emp) ⇒ for {
-        current ← Employee.requireVersion(emp, expectedVersion)
-        updated ← f(emp)
-      } yield updated
-      case None ⇒ s"employee $id does not exist".failNel
+      case Some(emp) => Employee.requireVersion(emp, expectedVersion) fold (f => f.failure, s => fn(s))
+      case None      => s"employee for $id does not exist".failureNel
+//      case Some(emp) ⇒ for {
+//        current ← Employee.requireVersion(emp, expectedVersion)
+//        updated ← f(emp)
+//      } yield updated
+//      case None ⇒ s"employee $id does not exist".failureNel
     }
 
   def updateActive[B <: Employee](id: String, version: Long)(f: ActiveEmployee ⇒ DomainValidation[B]): DomainValidation[B] =
     updateEmployee(id, version) {
       case emp: ActiveEmployee ⇒ f(emp)
-      case emp: Employee ⇒ "EmployeeNotActive".failNel
+      case emp: Employee ⇒ "EmployeeNotActive".failureNel
     }
 
   def updateInactive[B <: Employee](id: String, version: Long)(f: InactiveEmployee ⇒ DomainValidation[B]): DomainValidation[B] =
     updateEmployee(id, version) {
       case emp: InactiveEmployee ⇒ f(emp)
-      case emp: Employee ⇒ "EmployeeNotInactive".failNel
+      case emp: Employee ⇒ "EmployeeNotInactive".failureNel
     }
 
   def updateTermination[B <: Employee](id: String, version: Long)(f: Termination ⇒ DomainValidation[B]): DomainValidation[B] =
     updateEmployee(id, version) {
       case emp: Termination  ⇒ f(emp)
-      case emp: Employee ⇒ "EmployeeNotTerminated".failNel
+      case emp: Employee ⇒ "EmployeeNotTerminated".failureNel
     }
 
   private def updateEmployees(employee: Employee) {

@@ -2,14 +2,14 @@
 
 [![Build Status](https://travis-ci.org/ddevore/akka-persistence-mongo.png?branch=master)](https://travis-ci.org/ddevore/akka-persistence-mongo)
 
-A replicated [Akka Persistence](http://doc.akka.io/docs/akka/2.3.0/scala/persistence.html) journal backed by [MongoDB Casbah](http://mongodb.github.io/casbah/).
+A replicated [Akka Persistence](http://doc.akka.io/docs/akka/2.3.5/scala/persistence.html) journal backed by [MongoDB Casbah](http://mongodb.github.io/casbah/).
 
 ## Prerequisites
 
 | Technology | Version                          |
 | :--------: | -------------------------------- |
-| Scala      | 2.10.4, 2.11.1 - Cross Compiled  |
-| Akka       | 2.3.4 or higher                  |
+| Scala      | 2.10.4, 2.11.2 - Cross Compiled  |
+| Akka       | 2.3.5 or higher                  |
 | Mongo      | 2.4.8 or higher                  |
 
 ## Installation
@@ -21,7 +21,7 @@ The mongo journal driver is now available on the Maven Central Snapshot Repo.
     resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots"
 
     libraryDependencies ++= Seq(
-      "com.github.ddevore" %% "akka-persistence-mongo-casbah"  % "0.7.3-SNAPSHOT" % "compile")
+      "com.github.ddevore" %% "akka-persistence-mongo-casbah"  % "0.7.4-SNAPSHOT" % "compile")
 
 ### Maven
 
@@ -30,22 +30,22 @@ The mongo journal driver is now available on the Maven Central Snapshot Repo.
     <dependency>
         <groupId>com.github.ddevore</groupId>
         <artifactId>akka-persistence-mongo-casbah_2.10</artifactId>
-        <version>0.7.3-SNAPSHOT</version>
+        <version>0.7.4-SNAPSHOT</version>
     </dependency>
 
-#### Scala 2.11.1
+#### Scala 2.11.2
 
     <dependency>
         <groupId>com.github.ddevore</groupId>
         <artifactId>akka-persistence-mongo-casbah_2.11</artifactId>
-        <version>0.7.3-SNAPSHOT</version>
+        <version>0.7.4-SNAPSHOT</version>
     </dependency>
 
 ### Build Locally
 
-Build and install the journal plugin to your local Ivy cache with `sbt publishLocal` (requires sbt 0.13.2). It can then be included as dependency:
+Build and install the journal plugin to your local Ivy cache with `sbt publishLocal` (requires sbt 0.13.5). It can then be included as dependency:
 
-    libraryDependencies += "com.github.ddevore" %% "akka-persistence-mongo-casbah" % "0.7.3-SNAPSHOT"
+    libraryDependencies += "com.github.ddevore" %% "akka-persistence-mongo-casbah" % "0.7.4-SNAPSHOT"
 
 ## Journal Configuration
 
@@ -61,11 +61,7 @@ A comma-separated list of Mongo hosts. You can specify as many hosts as necessar
 
 ### casbah-journal.mongo-journal-write-concern
 
-A journal must support the following akka-persistence property:
-
-> When a processor's receive method is called with a Persistent message it can safely assume that this message has been successfully written to the journal.
-
-As a result only the following write concerns are supported:
+The following write concerns are supported:
 
 - `acknowledged` [Safe] - Exceptions are raised for network issues and server errors; waits on a server for the write operation.
 - `journaled` [JournalSafe] - Exceptions are raised for network issues, and server errors; the write operation waits for the server to group commit to the journal file on disk.
@@ -91,11 +87,7 @@ A comma-separated list of Mongo hosts. You can specify as many hosts as necessar
 
 ### casbah-snapshot-store.mongo-snapshot-write-concern
 
-A snapshot-store must support the following akka-persistence property:
-
-> When a processor's receive method is called to persist a snapshot it can safely assume that snapshot has been successfully written.
-
-As a result only the following write concerns are supported:
+The following write concerns are supported:
 
 - `acknowledged` [Safe] - Exceptions are raised for network issues and server errors; waits on a server for the write operation.
 - `journaled` [JournalSafe] - Exceptions are raised for network issues, and server errors; the write operation waits for the server to group commit to the journal file on disk.
@@ -113,11 +105,12 @@ Allows for the selection of the youngest of `{n}` snapshots that match the upper
 
 ## Status
 
-- All operations required by the Akka Persistence [journal plugin API](http://doc.akka.io/docs/akka/2.3.0/scala/persistence.html#journal-plugin-api) are supported.
+- All operations required by the Akka Persistence [journal plugin API](http://doc.akka.io/docs/akka/2.3.5/scala/persistence.html#journal-plugin-api) are supported.
+- Tested against [Akka Persistence Test Kit](https://github.com/krasserm/akka-persistence-testkit) version 0.3.4.
 - Message writes are batched to optimize throughput.
 - When using channels, confirmation writes are batched to optimize throughput.
 - Deletes (marked & permanent) are batched to optimize throughput.
-- Sharding is not yet supported.
+- Mongo Sharding is not yet supported.
 - Akka-Persistence is still considered **experimental** and as such the underlying api may change based on changes to Akka Persistence or user feedback.
 
 ## Performance
@@ -125,9 +118,13 @@ Allows for the selection of the youngest of `{n}` snapshots that match the upper
 Minimal performance testing is included against a **native** instance. In general the journal will persist around 7000 to 8000 messages per second.
 
 ## Example
-There is an [example application](https://github.com/ddevore/akka-persistence-mongo/tree/master/akka-persistence-mongo-command-sourcing-example-app) that implements Akka-Persistence [command sourcing](http://doc.akka.io/docs/akka/2.3.0/scala/persistence.html#Processors). In this example, the journal acts as a write-ahead-log for whatever persisted messages it recieves. 
+There is an [example
+application](https://github.com/ddevore/akka-persistence-mongo/tree/master/akka-persistence-mongo-command-sourcing-example-app) that
+implements Akka-Persistence [command
+sourcing](http://doc.akka.io/docs/akka/2.3.5/scala/persistence.html#Relaxed_local_consistency_requirements_and_high_throughput_use-cases)
+@see Note: In order to implement the pattern known as *"command sourcing..."*. In this example, the journal acts as a write-ahead-log for whatever persisted messages it recieves. 
 
-There is also an [example application](https://github.com/ddevore/akka-persistence-mongo/tree/master/akka-persistence-mongo-event-sourcing-example-app) that implements Akka-Persistence [event sourcing](http://doc.akka.io/docs/akka/2.3.0/scala/persistence.html#Event_sourcing).
+There is also an [example application](https://github.com/ddevore/akka-persistence-mongo/tree/master/akka-persistence-mongo-event-sourcing-example-app) that implements Akka-Persistence [event sourcing](http://doc.akka.io/docs/akka/2.3.5/scala/persistence.html#Event_sourcing).
 
 
 ## Author / Maintainer
