@@ -10,9 +10,9 @@ package object esexample {
    * Trait for validation errors
    */
   trait ValidationKey {
-    def failNel = this.toString.failNel
+    def failNel = this.toString.failureNel
     def nel = NonEmptyList(this.toString)
-    def failure = this.toString.fail
+    def failure = this.toString.failure
   }
 
   object CommonValidations {

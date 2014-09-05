@@ -34,7 +34,7 @@ object Employee {
 
   def requireVersion[A <: Employee](e: A, cmd: EmployeeCommand): DomainValidation[A] = {
     if (cmd.expectedVersion == e.version) e.successNel
-    else s"$e version does not match $cmd version".failNel
+    else s"$e version does not match $cmd version".failureNel
   }
 }
 
@@ -90,31 +90,31 @@ case class ActiveEmployee (
   import CommonValidations._
 
   def withLastName(lastName: String): DomainValidation[ActiveEmployee] =
-    checkString(lastName, LastNameRequired) fold (f => f.failNel, s => copy(version = version + 1, lastName = s).success)
+    checkString(lastName, LastNameRequired) fold (f => f.failureNel, s => copy(version = version + 1, lastName = s).success)
 
   def withFirstName(firstName: String): DomainValidation[ActiveEmployee] =
-    checkString(firstName, FirstNameRequired) fold (f => f.failNel, s => copy(version = version + 1, firstName = s).success)
+    checkString(firstName, FirstNameRequired) fold (f => f.failureNel, s => copy(version = version + 1, firstName = s).success)
 
   def withAddress(street: String, city: String, stateOrProvince: String, country: String,
       postalCode: String): DomainValidation[ActiveEmployee] =
-    Address.validate(street, city, stateOrProvince, country, postalCode) fold (f => f.fail, s => copy(version = version + 1,
+    Address.validate(street, city, stateOrProvince, country, postalCode) fold (f => f.failure, s => copy(version = version + 1,
       address = s).success)
 
   def withStartDate(startDate: Long): DomainValidation[ActiveEmployee] =
-    checkStartDate(startDate) fold (f => f.failNel, s => copy(version = version + 1, startDate = s).success)
+    checkStartDate(startDate) fold (f => f.failureNel, s => copy(version = version + 1, startDate = s).success)
 
   def withDept(dept: String): DomainValidation[ActiveEmployee] =
-    checkString(dept, DepartmentRequired) fold (f => f.failNel, s => copy(version = version + 1, dept = s).success)
+    checkString(dept, DepartmentRequired) fold (f => f.failureNel, s => copy(version = version + 1, dept = s).success)
 
   def withTitle(title: String): DomainValidation[ActiveEmployee] =
-    checkString(dept, TitleRequired) fold (f => f.failNel, s => copy(version = version + 1, title = s).success)
+    checkString(dept, TitleRequired) fold (f => f.failureNel, s => copy(version = version + 1, title = s).success)
 
   def withSalary(salary: BigDecimal): DomainValidation[ActiveEmployee] =
-    checkSalary(salary) fold (f => f.failNel, s => copy(version = version + 1, salary = s).success)
+    checkSalary(salary) fold (f => f.failureNel, s => copy(version = version + 1, salary = s).success)
 
   def deactivate(deactivateDate: Long): DomainValidation[InactiveEmployee] =
     checkDeactivateDate(deactivateDate, this.startDate) fold (
-      f => f.failNel,
+      f => f.failureNel,
       s => InactiveEmployee(this.id, this.version + 1, this.lastName, this.firstName, this.address, this.startDate, this.dept,
         this.title, this.salary, this.salaryOwed, s).success)
 
@@ -126,7 +126,7 @@ case class ActiveEmployee (
     }
 
   def pay(p: BigDecimal): DomainValidation[ActiveEmployee] =
-    checkPay(p, this.salaryOwed) fold (f => f.failNel, s => copy(version = version + 1, salaryOwed = salaryOwed - p).success)
+    checkPay(p, this.salaryOwed) fold (f => f.failureNel, s => copy(version = version + 1, salaryOwed = salaryOwed - p).success)
 }
 
 /**
@@ -192,7 +192,7 @@ case class TerminatedEmployee (
 
     def rehire(rehireDate: Long): DomainValidation[ActiveEmployee] =
       checkRehireDate(rehireDate, this.termDate) fold (
-        f => f.failNel,
+        f => f.failureNel,
         s => ActiveEmployee(this.id, version = this.version + 1, this.lastName, this.firstName, this.address, rehireDate,
           this.dept, this.title, this.salary, this.salaryOwed).success)
 }
@@ -361,7 +361,7 @@ class EmployeeProcessor extends PersistentActor {
 
   def hire(cmd: HireEmployee): DomainValidation[ActiveEmployee] =
     state.get(cmd.id) match {
-      case Some(emp) => s"employee for $cmd already exists".failNel
+      case Some(emp) => s"employee for $cmd already exists".failureNel
       case None      => ActiveEmployee.hire(cmd)
     }
 
@@ -403,25 +403,25 @@ class EmployeeProcessor extends PersistentActor {
 
   def updateEmployee[A <: Employee](cmd: EmployeeCommand)(fn: Employee => DomainValidation[A]): DomainValidation[A] =
     state.get(cmd.id) match {
-      case Some(emp) => Employee.requireVersion(emp, cmd) fold (f => f.fail, s => fn(s))
-      case None      => s"employee for $cmd does not exist".failNel
+      case Some(emp) => Employee.requireVersion(emp, cmd) fold (f => f.failure, s => fn(s))
+      case None      => s"employee for $cmd does not exist".failureNel
     }
 
   def updateActive[A <: Employee](cmd: EmployeeCommand)(fn: ActiveEmployee => DomainValidation[A]): DomainValidation[A] =
     updateEmployee(cmd) {
       case emp: ActiveEmployee => fn(emp)
-      case emp                 => s"$emp for $cmd is not active".failNel
+      case emp                 => s"$emp for $cmd is not active".failureNel
     }
 
   def updateInactive[A <: Employee](cmd: EmployeeCommand)(fn: InactiveEmployee => DomainValidation[A]): DomainValidation[A] =
     updateEmployee(cmd) {
       case emp: InactiveEmployee => fn(emp)
-      case emp                   => s"$emp for $cmd is not inactive".failNel
+      case emp                   => s"$emp for $cmd is not inactive".failureNel
     }
 
   def updateTerminated[A <: Employee](cmd: EmployeeCommand)(fn: TerminatedEmployee => DomainValidation[A]): DomainValidation[A] =
     updateEmployee(cmd) {
       case emp: TerminatedEmployee => fn(emp)
-      case emp                     => s"$emp for $cmd is not terminated".failNel
+      case emp                     => s"$emp for $cmd is not terminated".failureNel
     }
 }
