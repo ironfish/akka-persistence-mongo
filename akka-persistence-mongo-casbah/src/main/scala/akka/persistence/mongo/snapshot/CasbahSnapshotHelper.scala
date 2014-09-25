@@ -5,9 +5,13 @@ package akka.persistence.mongo.snapshot
 
 import akka.persistence.{SnapshotSelectionCriteria, SnapshotMetadata, SelectedSnapshot}
 
+import akka.persistence.serialization.Snapshot
+
 import akka.persistence.mongo.MongoPersistenceSnapshotRoot
 
 import com.mongodb.casbah.Imports._
+
+import scala.util.Try
 
 private[mongo] trait CasbahSnapshotHelper extends MongoPersistenceSnapshotRoot {
 
@@ -31,13 +35,24 @@ private[mongo] trait CasbahSnapshotHelper extends MongoPersistenceSnapshotRoot {
 
   collection.ensureIndex(snapIdx1, snapIdx1Options)
 
-  def writeJSON(snapshot: SelectedSnapshot) = {
+  def writeJSON(metadata: SnapshotMetadata, snapshot: Any) = {
     val builder = MongoDBObject.newBuilder
-    builder += PersistenceIdKey -> snapshot.metadata.persistenceId
-    builder += SequenceNrKey  -> snapshot.metadata.sequenceNr
-    builder += TimestampKey   -> snapshot.metadata.timestamp
-    builder += SnapshotKey    -> toBytes(snapshot)
+    builder += PersistenceIdKey -> metadata.persistenceId
+    builder += SequenceNrKey  -> metadata.sequenceNr
+    builder += TimestampKey   -> metadata.timestamp
+    builder += SnapshotKey    -> toBytes(Snapshot(snapshot))
     builder.result()
+  }
+
+  def readJSON(dbObject: MongoDBObject): Try[SelectedSnapshot] = {
+    Try(fromBytes[Snapshot](dbObject.as[Array[Byte]](SnapshotKey))).map { snapshot =>
+      val metadata = SnapshotMetadata(
+        dbObject.as[String](PersistenceIdKey),
+        dbObject.as[Long](SequenceNrKey),
+        dbObject.as[Long](TimestampKey)
+      )
+      SelectedSnapshot(metadata, snapshot.data)
+    }
   }
 
   def delStatement(meta: SnapshotMetadata): MongoDBObject =
