@@ -44,7 +44,7 @@ private[persistence] class CasbahSnapshotStore  extends SnapshotStore
 
   override def saveAsync(metadata: SnapshotMetadata, snapshot: Any): Future[Unit] = {
     saving += metadata
-    Future(collection.insert(writeJSON(SelectedSnapshot(metadata, snapshot))))
+    Future(collection.insert(writeJSON(metadata, snapshot)))
   }
 
   override def loadAsync(persistenceId: String, criteria: SnapshotSelectionCriteria): Future[Option[SelectedSnapshot]] = {
@@ -63,7 +63,7 @@ private[persistence] class CasbahSnapshotStore  extends SnapshotStore
   private def load(snaps: immutable.Seq[DBObject]): Option[SelectedSnapshot] = snaps.headOption match {
     case None => None
     case Some(snap) =>
-      Try(fromBytes[SelectedSnapshot](snap.as[Array[Byte]](SnapshotKey))) match {
+      readJSON(snap) match {
         case Success(s) => Some(s)
         case Failure(e) =>
           log.error(e, s"error loading snapshot $snap")
