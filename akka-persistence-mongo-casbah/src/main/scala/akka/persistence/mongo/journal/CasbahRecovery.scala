@@ -1,5 +1,5 @@
 /**
- *  Copyright (C) 2013-2014 Duncan DeVore. <http://reactant.org>
+ *  Copyright (C) 2013-2014 Duncan DeVore. <https://github.com/ironfish/>
  */
 package akka.persistence.mongo.journal
 

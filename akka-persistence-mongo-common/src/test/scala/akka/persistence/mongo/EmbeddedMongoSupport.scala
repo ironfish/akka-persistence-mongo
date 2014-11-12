@@ -1,10 +1,10 @@
 /**
- *  Copyright (C) 2013-2014 Duncan DeVore. <http://reactant.org>
+ *  Copyright (C) 2013-2014 Duncan DeVore. <https://github.com/ironfish/>
  */
 package akka.persistence.mongo
 
 import de.flapdoodle.embed.mongo.{ Command, MongodStarter }
-import de.flapdoodle.embed.mongo.config.{ ArtifactStoreBuilder, DownloadConfigBuilder, MongodConfigBuilder, Net, RuntimeConfigBuilder }
+import de.flapdoodle.embed.mongo.config.{ ArtifactStoreBuilder, DownloadConfigBuilder, MongoCmdOptionsBuilder, MongodConfigBuilder, Net, RuntimeConfigBuilder }
 import de.flapdoodle.embed.mongo.distribution.Version
 import de.flapdoodle.embed.process.config.IRuntimeConfig
 import de.flapdoodle.embed.process.config.io.ProcessOutput
@@ -52,6 +52,13 @@ trait EmbeddedMongoSupport {
     new MongodConfigBuilder()
       .version(version)
       .net(new Net(port, localHostIPV6))
+      .cmdOptions(new MongoCmdOptionsBuilder()
+        .syncDelay(1)
+        .useNoPrealloc(false)
+        .useSmallFiles(false)
+        .useNoJournal(false)
+        .enableTextSearch(true)
+        .build())
       .build()
 
   lazy val mongodStarter = MongodStarter.getInstance(runtimeConfig)
