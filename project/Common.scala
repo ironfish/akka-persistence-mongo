@@ -1,24 +1,25 @@
 /**
- *  Copyright (C) 2013-2014 Duncan DeVore. <http://reactant.org>
+ *  Copyright (C) 2013-2014 Duncan DeVore. <https://github.com/ironfish/>
  */
 import sbt._
 import Keys._
 
 object Common {
+  def Organization = "com.github.ironfish"
   def Name = "akka-persistence-mongo"
   def NameCommon = Name + "-common"
   def NameCasbah = Name + "-casbah"
-  def NameCommandSourcingExampleApp = Name + "-command-sourcing-example-app"
-  def NameEventSourcingExampleApp = Name + "-event-sourcing-example-app"
-  def Organization = "com.github.ddevore"
-  def ScalaVersion = "2.11.2"
-  def CrossScalaVersions = Seq("2.10.4", "2.11.2")
-  def Version = "0.7.4-SNAPSHOT"
+  def AkkaVersion = "2.3.7"
+  def CrossScalaVersions = Seq("2.10.4", "2.11.4")
+  def EmbeddedMongoVersion = "1.46.1"
+  def ScalaVersion = "2.11.4"
+  def ScalatestVersion = "2.2.2"
+  def Version = "0.7.5-SNAPSHOT"
   def ParallelExecutionInTest = false
   def ScalaCOptions = Seq( "-deprecation", "-unchecked", "-feature", "-language:postfixOps" )
   def TestCompile = "test->test;compile->compile"
   val PomXtra = {
-    <url>https://github.com/ddevore/akka-persistence-mongo</url>
+    <url>https://github.com/ironfish/akka-persistence-mongo</url>
       <licenses>
         <license>
           <name>Apache 2</name>
@@ -26,15 +27,15 @@ object Common {
         </license>
       </licenses>
       <scm>
-        <connection>scm:git:github.com/ddevore/akka-persistence-mongo.git</connection>
-        <developerConnection>scm:git:git@github.com:ddevore/akka-persistence-mongo.git</developerConnection>
-        <url>github.com/ddevore/akka-persistence-mongo.git</url>
+        <connection>scm:git:github.com/ironfish/akka-persistence-mongo.git</connection>
+        <developerConnection>scm:git:git@github.com:ironfish/akka-persistence-mongo.git</developerConnection>
+        <url>github.com/ironfish/akka-persistence-mongo.git</url>
       </scm>
       <developers>
         <developer>
-          <id>ddevore</id>
+          <id>ironfish</id>
           <name>Duncan DeVore</name>
-          <url>https://github.com/ddevore/</url>
+          <url>https://github.com/ironfish/</url>
         </developer>
         <developer>
           <id>sean-walsh</id>
