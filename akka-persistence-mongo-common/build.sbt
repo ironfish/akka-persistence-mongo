@@ -4,15 +4,11 @@ import SonatypeKeys._
 sonatypeSettings
 
 organization := Common.Organization
-
 profileName := Common.Organization
-
 name := Common.NameCommon
 
 scalaVersion := Common.ScalaVersion
-
 crossScalaVersions := Common.CrossScalaVersions
-
 version := Common.Version
 
 parallelExecution in Test := Common.ParallelExecutionInTest

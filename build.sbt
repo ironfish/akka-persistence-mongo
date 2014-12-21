@@ -1,9 +1,7 @@
 crossScalaVersions := Common.CrossScalaVersions
 
 publishLocal := {}
-
 publish := {}
-
 publishArtifact := false
 
 lazy val akkaPersistenceMongoCommon = project in file(Common.NameCommon)
