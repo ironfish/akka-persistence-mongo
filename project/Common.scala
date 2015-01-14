@@ -14,7 +14,7 @@ object Common {
   def EmbeddedMongoVersion = "1.46.1"
   def ScalaVersion = "2.11.4"
   def ScalatestVersion = "2.2.2"
-  def Version = "0.7.5-SNAPSHOT"
+  def Version = "0.7.6-SNAPSHOT"
   def ParallelExecutionInTest = false
   def ScalaCOptions = Seq( "-deprecation", "-unchecked", "-feature", "-language:postfixOps" )
   def TestCompile = "test->test;compile->compile"
