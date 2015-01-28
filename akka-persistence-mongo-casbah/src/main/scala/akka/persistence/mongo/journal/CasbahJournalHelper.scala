@@ -3,14 +3,15 @@
  */
 package akka.persistence.mongo.journal
 
+import akka.actor.ActorLogging
 import akka.persistence.PersistentRepr
 
 import com.mongodb.casbah.Imports._
 
-import akka.persistence.mongo.MongoPersistenceJournalRoot
+import akka.persistence.mongo.{IndexesSupport, MongoPersistenceJournalRoot}
 
-private[mongo] trait CasbahJournalHelper extends MongoPersistenceJournalRoot {
-
+private[mongo] trait CasbahJournalHelper extends MongoPersistenceJournalRoot with IndexesSupport {
+  mixin : ActorLogging =>
   val PersistenceIdKey = "persistenceId"
   val SequenceNrKey = "sequenceNr"
   val AggIdKey = "_id"
@@ -44,9 +45,9 @@ private[mongo] trait CasbahJournalHelper extends MongoPersistenceJournalRoot {
   private[this] val db = client(uri.database.getOrElse(throw new Exception("Cannot get database out of the mongodb URI, probably invalid format")))
   val collection = db(uri.collection.getOrElse(throw new Exception("Cannot get collection out of the mongodb URI, probably invalid format")))
 
-  collection.ensureIndex(idx1, idx1Options)
-  collection.ensureIndex(idx2)
-  collection.ensureIndex(idx3)
+  ensure(idx1, idx1Options)(collection)
+  ensure(idx2)(collection)
+  ensure(idx3)(collection)
 
   def writeJSON(pId: String, sNr: Long, pr: PersistentRepr) = {
     val builder = MongoDBObject.newBuilder

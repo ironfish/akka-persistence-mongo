@@ -3,17 +3,19 @@
  */
 package akka.persistence.mongo.snapshot
 
+import akka.actor.ActorLogging
 import akka.persistence.{SnapshotSelectionCriteria, SnapshotMetadata, SelectedSnapshot}
 
 import akka.persistence.serialization.Snapshot
 
-import akka.persistence.mongo.MongoPersistenceSnapshotRoot
+import akka.persistence.mongo.{IndexesSupport, MongoPersistenceSnapshotRoot}
 
 import com.mongodb.casbah.Imports._
 
 import scala.util.Try
 
-private[mongo] trait CasbahSnapshotHelper extends MongoPersistenceSnapshotRoot {
+private[mongo] trait CasbahSnapshotHelper extends MongoPersistenceSnapshotRoot with IndexesSupport {
+  mixin : ActorLogging =>
 
   val PersistenceIdKey = "persistenceId"
   val SequenceNrKey = "sequenceNr"
@@ -33,7 +35,7 @@ private[mongo] trait CasbahSnapshotHelper extends MongoPersistenceSnapshotRoot {
   private[this] val db = client(uri.database.getOrElse(throw new Exception("Cannot get database out of the mongodb URI, probably invalid format")))
   val collection = db(uri.collection.getOrElse(throw new Exception("Cannot get collection out of the mongodb URI, probably invalid format")))
 
-  collection.ensureIndex(snapIdx1, snapIdx1Options)
+  ensure(snapIdx1, snapIdx1Options)(collection)
 
   def writeJSON(metadata: SnapshotMetadata, snapshot: Any) = {
     val builder = MongoDBObject.newBuilder
