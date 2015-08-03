@@ -1,10 +1,9 @@
 import xerial.sbt.Sonatype._
-import SonatypeKeys._
 
 sonatypeSettings
 
 organization := Common.Organization
-profileName := Common.Organization
+sonatypeProfileName := Common.Organization
 name := Common.NameCommon
 
 scalaVersion := Common.ScalaVersion
@@ -18,7 +17,7 @@ scalacOptions ++= Common.ScalaCOptions
 pomExtra := Common.PomXtra
 
 libraryDependencies ++= Seq(
-  "ch.qos.logback"       % "logback-classic"                % "1.1.1"                        % "test",
+  "ch.qos.logback"       % "logback-classic"                % "1.1.3"                        % "test",
   "commons-io"           % "commons-io"                     % "2.4"                          % "test",
   "com.typesafe.akka"   %% "akka-testkit"                   % Common.AkkaVersion             % "test",
   "com.typesafe.akka"   %% "akka-persistence-experimental"  % Common.AkkaVersion             % "compile",

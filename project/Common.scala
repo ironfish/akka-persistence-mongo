@@ -1,20 +1,18 @@
 /**
  *  Copyright (C) 2013-2014 Duncan DeVore. <https://github.com/ironfish/>
  */
-import sbt._
-import Keys._
 
 object Common {
   def Organization = "com.github.ironfish"
   def Name = "akka-persistence-mongo"
   def NameCommon = Name + "-common"
   def NameCasbah = Name + "-casbah"
-  def AkkaVersion = "2.3.7"
-  def CrossScalaVersions = Seq("2.10.4", "2.11.4")
-  def EmbeddedMongoVersion = "1.46.1"
-  def ScalaVersion = "2.11.4"
-  def ScalatestVersion = "2.2.2"
-  def Version = "0.7.6-SNAPSHOT"
+  def AkkaVersion = "2.3.12"
+  def CrossScalaVersions = Seq("2.10.5", "2.11.7")
+  def EmbeddedMongoVersion = "1.48.2"
+  def ScalaVersion = "2.11.7"
+  def ScalatestVersion = "2.2.4"
+  def Version = "0.7.6"
   def ParallelExecutionInTest = false
   def ScalaCOptions = Seq( "-deprecation", "-unchecked", "-feature", "-language:postfixOps" )
   def TestCompile = "test->test;compile->compile"

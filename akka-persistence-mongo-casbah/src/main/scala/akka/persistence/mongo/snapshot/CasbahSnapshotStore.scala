@@ -13,7 +13,7 @@ import com.typesafe.config.Config
 
 import scala.collection.immutable
 import scala.concurrent._
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Success}
 
 private[persistence] class CasbahSnapshotStore  extends SnapshotStore
     with CasbahSnapshotHelper

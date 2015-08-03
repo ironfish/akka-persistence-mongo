@@ -10,18 +10,18 @@ A replicated [Akka Persistence](http://doc.akka.io/docs/akka/current/scala/persi
 
 | Technology | Version                          |
 | :--------: | -------------------------------- |
-| Plugin     | 0.7.5                            |
-| Scala      | 2.10.4, 2.11.4 - Cross Compiled  |
-| Akka       | 2.3.7 or higher                  |
+| Plugin     | 0.7.6                            |
+| Scala      | 2.10.5, 2.11.7 - Cross Compiled  |
+| Akka       | 2.3.12 or higher                 |
 | Mongo      | 2.6.x or higher                  |
 
 ### Snapshot
 
 | Technology | Version                          |
 | :--------: | -------------------------------- |
-| Plugin     | 0.7.6-SNAPSHOT                   |
-| Scala      | 2.10.4, 2.11.4 - Cross Compiled  |
-| Akka       | 2.3.7 or higher                  |
+| Plugin     | 0.7.7-SNAPSHOT                   |
+| Scala      | 2.10.5, 2.11.7 - Cross Compiled  |
+| Akka       | 2.3.12 or higher                 |
 | Mongo      | 2.6.x or higher                  |
 
 ## Important Changes Starting with Version 0.7.5-SNAPSHOT
@@ -50,7 +50,7 @@ Just standard release management stuff. Nothing to see here move along. :-)
 resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/releases"
 
 libraryDependencies ++= Seq(
-  "com.github.ironfish" %% "akka-persistence-mongo-casbah"  % "0.7.5" % "compile")
+  "com.github.ironfish" %% "akka-persistence-mongo-casbah"  % "0.7.6" % "compile")
 ```
 
 #### Snapshot
@@ -59,7 +59,7 @@ libraryDependencies ++= Seq(
 resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots"
 
 libraryDependencies ++= Seq(
-  "com.github.ironfish" %% "akka-persistence-mongo-casbah"  % "0.7.6-SNAPSHOT" % "compile")
+  "com.github.ironfish" %% "akka-persistence-mongo-casbah"  % "0.7.7-SNAPSHOT" % "compile")
 ```
 
 ### Maven
@@ -67,42 +67,42 @@ libraryDependencies ++= Seq(
 #### Release
 
 ```XML
-// Scala 2.10.4
+// Scala 2.10.5
 <dependency>
     <groupId>com.github.ironfish</groupId>
     <artifactId>akka-persistence-mongo-casbah_2.10</artifactId>
-    <version>0.7.5</version>
+    <version>0.7.6</version>
 </dependency>
 
-// Scala 2.11.4
+// Scala 2.11.7
 <dependency>
     <groupId>com.github.ironfish</groupId>
     <artifactId>akka-persistence-mongo-casbah_2.11</artifactId>
-    <version>0.7.5</version>
+    <version>0.7.6</version>
 </dependency>
 ```
 
 #### Snapshot
 
 ```XML
-// Scala 2.10.4
+// Scala 2.10.5
 <dependency>
     <groupId>com.github.ironfish</groupId>
     <artifactId>akka-persistence-mongo-casbah_2.10</artifactId>
-    <version>0.7.6-SNAPSHOT</version>
+    <version>0.7.7-SNAPSHOT</version>
 </dependency>
 
-// Scala 2.11.4
+// Scala 2.11.7
 <dependency>
     <groupId>com.github.ironfish</groupId>
     <artifactId>akka-persistence-mongo-casbah_2.11</artifactId>
-    <version>0.7.6-SNAPSHOT</version>
+    <version>0.7.7-SNAPSHOT</version>
 </dependency>
 ```
 
 ### Build Locally
 
-You can build and install the plugin to your local Ivy cache. This requires sbt 0.13.5 or above.
+You can build and install the plugin to your local Ivy cache. This requires sbt 0.13.8 or above.
 
 ```scala
 sbt publishLocal
@@ -111,7 +111,7 @@ sbt publishLocal
 <br/>It can then be included as dependency:
 
 ```scala
-libraryDependencies += "com.github.ironfish" %% "akka-persistence-mongo-casbah" % "0.7.6-SNAPSHOT"
+libraryDependencies += "com.github.ironfish" %% "akka-persistence-mongo-casbah" % "0.7.7-SNAPSHOT"
 ```
 
 ## Mongo Specific Details
@@ -325,6 +325,12 @@ Minimal performance testing is included against a **native** instance. In genera
 The [sample applications](https://github.com/ironfish/akka-persistence-mongo-samples) are now located in their own repository.
 
 ## Change Log
+
+### 0.7.6
+
+* Upgrade `sbt` to 0.13.8.
+* Upgrade `Scala` cross-compilation to 2.10.5 & 2.11.7.
+* Upgrade `Akka` to 2.3.12.
 
 ### 0.7.5
 

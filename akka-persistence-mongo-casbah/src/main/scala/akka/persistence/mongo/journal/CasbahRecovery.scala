@@ -34,7 +34,7 @@ trait CasbahRecovery extends AsyncRecovery { this: CasbahJournal ⇒
         val confirms = x._2.filter(_._1.as[String](MarkerKey).substring(0,1) == MarkerConfirmPrefix).map(_._1.as[String](MarkerKey).substring(2)).to[immutable.Seq]
         if (entry.nonEmpty) Some(entry.get.update(deleted = deleted, confirms = confirms)) else None
       } else None
-    } map replayCallback
+    } foreach replayCallback
   }
 
   override def asyncReadHighestSequenceNr(persistenceId: String, fromSequenceNr: Long): Future[Long] = Future {

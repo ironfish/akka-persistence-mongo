@@ -1,10 +1,9 @@
 import xerial.sbt.Sonatype._
-import SonatypeKeys._
 
 sonatypeSettings
 
 organization := Common.Organization
-profileName := Common.Organization
+sonatypeProfileName := Common.Organization
 name := Common.NameCasbah
 
 scalaVersion := Common.ScalaVersion
@@ -21,6 +20,6 @@ resolvers += "krasserm at bintray" at "http://dl.bintray.com/krasserm/maven"
 resolvers += "Sonatype snapshots" at "https://oss.sonatype.org/content/repositories/snapshots"
 
 libraryDependencies ++= Seq(
-  "org.mongodb"         %% "casbah"                        % "2.7.4"    % "compile" pomOnly(),
+  "org.mongodb"         %% "casbah"                        % "2.8.2"    % "compile" pomOnly(),
   "com.github.krasserm" %% "akka-persistence-testkit"      % "0.3.4"    % "test"
 )
