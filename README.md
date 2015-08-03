@@ -10,7 +10,7 @@ A replicated [Akka Persistence](http://doc.akka.io/docs/akka/current/scala/persi
 
 | Technology | Version                          |
 | :--------: | -------------------------------- |
-| Plugin     | 0.7.6                            |
+| Plugin     | [<img src="https://img.shields.io/maven-central/v/com.github.ironfish/akka-persistence-mongo-casbah_2.11.svg?label=latest%20release%20for%202.11"/>](http://search.maven.org/#search%7cga%7c1%7cg%3a%22com.github.ironfish%22a%3a%22akka-persistence-mongo-casbah_2.11%22)<br/>[<img src="https://img.shields.io/maven-central/v/com.github.ironfish/akka-persistence-mongo-casbah_2.10*.svg?label=latest%20release%20for%202.10"/>](http://search.maven.org/#search%7cga%7c1%7cg%3a%22com.github.ironfish%22a%3a%22akka-persistence-mongo-casbah_2.10%22)|
 | Scala      | 2.10.5, 2.11.7 - Cross Compiled  |
 | Akka       | 2.3.12 or higher                 |
 | Mongo      | 2.6.x or higher                  |
@@ -19,7 +19,7 @@ A replicated [Akka Persistence](http://doc.akka.io/docs/akka/current/scala/persi
 
 | Technology | Version                          |
 | :--------: | -------------------------------- |
-| Plugin     | 0.7.7-SNAPSHOT                   |
+| Plugin     | [<img src="https://img.shields.io/badge/latest%20snapshot%20for%202.11-0.7.7--SNAPSHOT-blue.svg"/>](https://oss.sonatype.org/content/repositories/snapshots/com/github/ironfish/akka-persistence-mongo-casbah_2.11/0.7.7-SNAPSHOT/)<br/>[<img src="https://img.shields.io/badge/latest%20snapshot%20for%202.10-0.7.7--SNAPSHOT-blue.svg"/>](https://oss.sonatype.org/content/repositories/snapshots/com/github/ironfish/akka-persistence-mongo-casbah_2.10/0.7.7-SNAPSHOT/)|
 | Scala      | 2.10.5, 2.11.7 - Cross Compiled  |
 | Akka       | 2.3.12 or higher                 |
 | Mongo      | 2.6.x or higher                  |
