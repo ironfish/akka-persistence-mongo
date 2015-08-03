@@ -29,12 +29,12 @@ import MongoPersistenceRoot._
 
     def ensure(ind0: DBObject, ind1: DBObject): (MongoCollection) => Unit =
       collection =>
-        Try(collection.ensureIndex(ind0, ind1)).recover(errorHandler)
+        Try(collection.createIndex(ind0, ind1)).recover(errorHandler)
 
 
     def ensure(ind: DBObject): (MongoCollection) => Unit =
       collection =>
-        Try (collection.ensureIndex(ind)).recover(errorHandler)
+        Try (collection.createIndex(ind)).recover(errorHandler)
 
   }
 }
