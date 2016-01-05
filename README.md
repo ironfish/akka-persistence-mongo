@@ -19,26 +19,10 @@ A replicated [Akka Persistence](http://doc.akka.io/docs/akka/current/scala/persi
 
 | Technology | Version                          |
 | :--------: | -------------------------------- |
-| Plugin     | [<img src="https://img.shields.io/badge/latest%20snapshot%20for%202.11-0.7.7--SNAPSHOT-blue.svg"/>](https://oss.sonatype.org/content/repositories/snapshots/com/github/ironfish/akka-persistence-mongo-casbah_2.11/0.7.7-SNAPSHOT/)<br/>[<img src="https://img.shields.io/badge/latest%20snapshot%20for%202.10-0.7.7--SNAPSHOT-blue.svg"/>](https://oss.sonatype.org/content/repositories/snapshots/com/github/ironfish/akka-persistence-mongo-casbah_2.10/0.7.7-SNAPSHOT/)|
-| Scala      | 2.10.5, 2.11.7 - Cross Compiled  |
-| Akka       | 2.3.12 or higher                 |
-| Mongo      | 2.6.x or higher                  |
-
-## Important Changes Starting with Version 0.7.5-SNAPSHOT
-
-Due to the stability of the plugin and the increasing number of requests to publish to Maven Central Releases, we have implemented an official release strategy. In doing so, please **note** the following changes:
-
-* Starting with version `0.7.5-SNAPSHOT` The organization name has **changed** from `com.github.ddevore` to `com.github.ironfish`.
-
-* Versions `0.7.5` and beyond, when released, will be tagged and published to `https://oss.sonatype.org/content/repositories/releases`.
-
-* Snapshots will continue to be published to `https://oss.sonatype.org/content/repositories/snapshots` and use the version moniker `#.#.#-SNAPSHOT`.
-
-* When a snapshot is migrated to release, it will be tagged, published, and will **no** longer be available in the snapshots repository.
-
-* If your looking or the [Sample Applications](https://github.com/ironfish/akka-persistence-mongo-samples), they have been moved to their own repo.
-
-Just standard release management stuff. Nothing to see here move along. :-)
+| Plugin     | [<img src="https://img.shields.io/badge/latest%20snapshot%20for%202.11-1.0.0--SNAPSHOT-blue.svg"/>](https://oss.sonatype.org/content/repositories/snapshots/com/github/ironfish/akka-persistence-mongo-casbah_2.11/1.0.0-SNAPSHOT/)
+| Scala      | 2.11.7                           |
+| Akka       | 2.4.1 or higher                  |
+| Mongo      | 3.1.x or higher                  |
 
 ## Installation
 
@@ -59,7 +43,7 @@ libraryDependencies ++= Seq(
 resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots"
 
 libraryDependencies ++= Seq(
-  "com.github.ironfish" %% "akka-persistence-mongo-casbah"  % "0.7.7-SNAPSHOT" % "compile")
+  "com.github.ironfish" %% "akka-persistence-mongo"  % "1.0.0-SNAPSHOT" % "compile")
 ```
 
 ### Maven
@@ -85,18 +69,11 @@ libraryDependencies ++= Seq(
 #### Snapshot
 
 ```XML
-// Scala 2.10.5
-<dependency>
-    <groupId>com.github.ironfish</groupId>
-    <artifactId>akka-persistence-mongo-casbah_2.10</artifactId>
-    <version>0.7.7-SNAPSHOT</version>
-</dependency>
-
 // Scala 2.11.7
 <dependency>
     <groupId>com.github.ironfish</groupId>
-    <artifactId>akka-persistence-mongo-casbah_2.11</artifactId>
-    <version>0.7.7-SNAPSHOT</version>
+    <artifactId>akka-persistence-mongo_2.11</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
 </dependency>
 ```
 
@@ -111,7 +88,7 @@ sbt publishLocal
 <br/>It can then be included as dependency:
 
 ```scala
-libraryDependencies += "com.github.ironfish" %% "akka-persistence-mongo-casbah" % "0.7.7-SNAPSHOT"
+libraryDependencies += "com.github.ironfish" %% "akka-persistence-mongo" % "1.0.0-SNAPSHOT"
 ```
 
 ## Mongo Specific Details
@@ -149,13 +126,12 @@ mongodb://[username:password@]host1[:port1][,host2[:port2],...[,hostN[:portN]]][
 
 ### Mongo Write Concern
 
-[Write concern](http://docs.mongodb.org/manual/core/write-concern/) describes the guarantee that MongoDB provides when reporting on the success of a write operation. The strength of the write concerns determine the level of guarantee. The following write concerns are supported.
+The [Write Concern Specification](https://docs.mongodb.org/manual/reference/write-concern/) describes the guarantee that MongoDB provides when reporting on the success of a write operation. The strength of the write concern determine the level of guarantee. When a `PersistentActor's` `persist` or `persistAsync` method completes successfully, a plugin must ensure the `message` or `snapshot` has persisted to the store. As a result, this plugin implementation enforces Mongo [Journaling](https://docs.mongodb.org/manual/core/journaling/) on all write concerns and requires all mongo instance(s) to enable journaling.
 
-| Write Concern | Description |
+| Options | Description |
 | :------------ | ----------- |
-| `acknowledged` | [Safe] - Exceptions are raised for network issues and server errors; waits on a server for the write operation. |
-| `journaled` | [JournalSafe] - Exceptions are raised for network issues, and server errors; the write operation waits for the server to group commit to the journal file on disk. |
-| `replicas-acknowledged` | [ReplicasSafe] - Exceptions are raised for network issues and server errors; waits for at least 2 servers for the write operation. |
+| `woption`     | The `woption` requests acknowledgment that the write operation has propagated to a specified number of mongod instances or to mongod instances with specified tags.  Mongo's `wOption` can be either an `Integer` or `String`, and this plugin implementation supports both with `woption`. <br/><br/>If `woption` is an `Integer`, then the write concern requests acknowledgment that the write operation has propagated to the specified number of mongod instances. Note: The `woption` cannot be set to zero. <br/><br/>If `woption` is a `String`, then the value can be either `"majority"` or a `tag set name`. If the value is `"majority"` then the write concern requests acknowledgment that write operations have propagated to the majority of voting nodes. If the value is a `tag set name`, the write concern requests acknowledgment that the write operations have propagated to a replica set member with the specified tag. The default value is an `Integer` value of `1`. |
+| `wtimeout`    | This option specifies a time limit, in `milliseconds`, for the write concern. If you do not specify the `wtimeout` option, and the level of write concern is unachievable, the write operation will **block** indefinitely. Specifying a `wtimeout` value of `0` is equivalent to a write concern without the `wTimeout` option. The default value is `10000` (10 seconds). |
 
 ## Journal Configuration
 
@@ -169,55 +145,55 @@ akka.persistence.journal.plugin = "casbah-journal"
 
 ### Connection
 
-The default `mongo-journal-url` is a `string` with a value of:
+The default `mongo-url` is a `string` with a value of:
 
 ```scala
-casbah-journal.mongo-journal-url = "mongodb://localhost:27017/store.messages"
+casbah-journal.mongo-url = "mongodb://localhost:27017/store.messages"
 ```
 
 <br/>This value can be changed in the `application.conf` with the following key:
 
 ```scala
-casbah-journal.mongo-journal-url
+casbah-journal.mongo-url
 
 # Example
-casbah-journal.mongo-journal-url = "mongodb://localhost:27017/employee.events"
+casbah-journal.mongo-url = "mongodb://localhost:27017/employee.events"
 ```
 
 <br/>See the [Mongo Connection String URI](#mongo-connection-string-uri) section of this document for more information.
 
 ### Write Concern
 
-The default `mongo-journal-write-concern` is a `string` with a value of:
+The default `woption` is an `Integer` with a value of:
 
 ```scala
-casbah-journal.mongo-journal-write-concern = "journaled"
+casbah-journal.woption = 1
 ```
 
 <br/>This value can be changed in the `application.conf` with the following key:
 
 ```scala
-casbah-journal.mongo-journal-write-concern
+casbah-journal.woption
 
 # Example
-casbah-journal.mongo-journal-write-concern = "replicas-acknowledged"
+casbah-journal.woption = "majority"
 ```
 
 ### Write Concern Timeout
 
-The default `mongo-journal-write-concern-timeout` is an `int` in milliseconds with a value of:
+The default `wtimeout` is an `Long` in milliseconds with a value of:
 
 ```scala
-casbah-journal-mongo-journal-write-concern-timeout = 10000
+casbah-journal.wtimeout = 10000
 ```
 
 <br/>This value can be changed in the `application.conf` with the following key:
 
 ```scala
-casbah-journal-mongo-journal-write-concern-timeout
+casbah-journal.wtimeout
 
 # Example
-casbah-journal-mongo-journal-write-concern-timeout = 5000
+casbah-journal.wtimeout = 5000
 ```
 
 <br/>See the [Mongo Write Concern](#mongo-write-concern) section of this document for more information.
@@ -229,92 +205,90 @@ casbah-journal-mongo-journal-write-concern-timeout = 5000
 To activate the snapshot feature of the plugin, add the following line to your Akka `application.conf`. This will run the snapshot-store with its default settings.
 
 ```scala
-akka.persistence.snapshot-store.plugin = "casbah-snapshot-store"
+akka.persistence.snapshot-store.plugin = "casbah-snapshot"
 ```
 
 ### Connection
 
-The default `mongo-snapshot-url` is a `string` with a value of:
+The default `mongo-url` is a `string` with a value of:
 
 ```scala
-casbah-snapshot-store.mongo-snapshot-url = "mongodb://localhost:27017/store.snapshots"
+casbah-snapshot.mongo-url = "mongodb://localhost:27017/store.snapshots"
 ```
 
 <br/>This value can be changed in the `application.conf` with the following key:
 
 ```scala
-casbah-snapshot-store.mongo-snapshot-url
+casbah-snapshot.mongo-url
 
 # Example
-casbah-snapshot-store.mongo-snapshot-url = "mongodb://localhost:27017/employee.snapshots"
+casbah-snapshot.mongo-url = "mongodb://localhost:27017/employee.snapshots"
 ```
 
 <br/>See the [Mongo Connection String URI](#mongo-connection-string-uri) section of this document for more information.
 
 ### Write Concern
 
-The default `mongo-snapshot-write-concern` is a `string` with a value of:
+The default `woption` is an `Integer` with a value of:
 
 ```scala
-casbah-snapshot-store.mongo-snapshot-write-concern = "journaled"
+casbah-snapshot.woption = 1
 ```
 
 <br/>This value can be changed in the `application.conf` with the following key:
 
 ```scala
-casbah-snapshot-store.mongo-snapshot-write-concern
+casbah-snapshot.woption
 
 # Example
-casbah-snapshot-store.mongo-snapshot-write-concern = "replicas-acknowledged"
+casbah-snapshot.woption = "majority"
 ```
-
-<br/>See the [Mongo Write Concern](#mongo-write-concern) section of this document for more information.
 
 ### Write Concern Timeout
 
-The default `mongo-snapshot-write-concern-timeout` is an `int` in milliseconds with a value of:
+The default `wtimeout` is an `Long` in milliseconds with a value of:
 
 ```scala
-casbah-snapshot-store.mongo-snapshot-write-concern-timeout = 10000
+casbah-snapshot.wtimeout = 10000
 ```
 
 <br/>This value can be changed in the `application.conf` with the following key:
 
 ```scala
-casbah-snapshot-store.mongo-snapshot-write-concern-timeout
+casbah-snapshot.wtimeout
 
 # Example
-casbah-snapshot-store.mongo-snapshot-write-concern-timeout = 5000
+casbah-snapshot.wtimeout = 5000
 ```
+
+<br/>See the [Mongo Write Concern](#mongo-write-concern) section of this document for more information.
 
 ### Snapshot Load Attempts
 
 The snapshot feature of the plugin allows for the selection of the youngest of `{n}` snapshots that match an upper bound specified by configuration. This helps where a snapshot may not have persisted correctly because of a JVM crash. As a result an attempt to load the snapshot may fail but an older may succeed.
 
-The default `mongo-snapshot-load-attempt` is an `int` with a value of:
+The default `load-attempts` is an `Integer` with a value of:
 
 ```scala
-casbah-snapshot-store.mongo-snapshot-load-attempts = 3
+casbah-snapshot.load-attempts = 3
 ```
 
 <br/>This value can be changed in the `application.conf` with the following key:
 
 ```scala
-casbah-snapshot-store.mongo-snapshot-load-attempts
+casbah-snapshot.load-attempts
 
 # Example
-casbah-snapshot-store.mongo-snapshot-load-attempts = 5
+casbah-snapshot.load-attempts = 5
 ```
 
 ## Status
 
-* All operations required by the Akka Persistence [journal plugin API](http://doc.akka.io/docs/akka/current/scala/persistence.html#journal-plugin-api) are supported.
-* All operations required by the Akka Persistence [Snapshot store plugin API](http://doc.akka.io/docs/akka/current/scala/persistence.html#journal-plugin-api) are supported.
-* Tested against [Akka Persistence Test Kit](https://github.com/krasserm/akka-persistence-testkit) version 0.3.4.
+* All operations required by the Akka Persistence [journal plugin API](http://doc.akka.io/docs/akka/current/scala/persistence.html#Journal_plugin_API) are supported.
+* All operations required by the Akka Persistence [Snapshot store plugin API](http://doc.akka.io/docs/akka/current/scala/persistence.html#Snapshot_store_plugin_API) are supported.
+* Tested against [Plugin TCK](http://doc.akka.io/docs/akka/current/scala/persistence.html#Plugin_TCK).
+* Plugin uses [Asynchronous Casbah Driver](http://mongodb.github.io/casbah/3.1/)
 * Message writes are batched to optimize throughput.
-* `AtLeastOnceDelivery` writes are batched to optimize throughput.
-* Mongo Sharding is not yet supported.
-* Akka-Persistence is still considered **experimental** and as such the underlying api may change based on changes to Akka Persistence or user feedback.
 
 ## Performance
 
@@ -325,6 +299,12 @@ Minimal performance testing is included against a **native** instance. In genera
 The [sample applications](https://github.com/ironfish/akka-persistence-mongo-samples) are now located in their own repository.
 
 ## Change Log
+
+### 1.0.0-SNAPSHOT
+
+* Upgrade `Akka` 2.4.1.
+* Upgrade `Casbah` to `Async` driver 3.1.
+* Supports latest [Plugin TCK](http://doc.akka.io/docs/akka/current/scala/persistence.html#Plugin_TCK).
 
 ### 0.7.6
 
