@@ -198,6 +198,27 @@ casbah-journal.wtimeout = 5000
 
 <br/>See the [Mongo Write Concern](#mongo-write-concern) section of this document for more information.
 
+### Reject Non-Serializable Objects
+
+This plugin supports the rejection of `non-serializable` journal messages. If `reject-non-serializable-objects` is set to `true` and a message is received who's payload cannot be `serialized` then it is rejected.
+
+If set to `false` (the default value) then the `non-serializable` payload of the message becomes `Array.empty[Byte]` and is persisted.
+
+the default `reject-non-serializable-objects` is a `Boolean` with the value of:
+
+```scala
+casbah-journal.reject-non-serializable-objects = false
+```
+
+<br/>This value can be changed in the `application.conf` with the following key:
+
+```scala
+casbah-journal.reject-non-serializable-objects
+
+# Example
+casbah-journal.reject-non-serializable-objects = true
+```
+
 ## Snapshot Configuration
 
 ### Activation
