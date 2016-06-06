@@ -20,8 +20,8 @@ A replicated [Akka Persistence](http://doc.akka.io/docs/akka/current/scala/persi
 | Technology | Version                          |
 | :--------: | -------------------------------- |
 | Plugin     | [<img src="https://img.shields.io/badge/latest%20snapshot%20for%202.11-1.0.0--SNAPSHOT-blue.svg"/>](https://oss.sonatype.org/content/repositories/snapshots/com/github/ironfish/akka-persistence-mongo-casbah_2.11/1.0.0-SNAPSHOT/)
-| Scala      | 2.11.7                           |
-| Akka       | 2.4.1 or higher                  |
+| Scala      | 2.11.8                           |
+| Akka       | 2.4.7 or higher                  |
 | Mongo      | 3.1.x or higher                  |
 
 ## Installation
@@ -69,7 +69,7 @@ libraryDependencies ++= Seq(
 #### Snapshot
 
 ```XML
-// Scala 2.11.7
+// Scala 2.11.8
 <dependency>
     <groupId>com.github.ironfish</groupId>
     <artifactId>akka-persistence-mongo_2.11</artifactId>
@@ -320,6 +320,11 @@ Minimal performance testing is included against a **native** instance. In genera
 The [sample applications](https://github.com/ironfish/akka-persistence-mongo-samples) are now located in their own repository.
 
 ## Change Log
+
+### 1.0.0-SNAPSHOT (Update)
+
+* Upgrade `Akka` 2.4.7
+* Upgrade `Casbah` to `Async` driver 3.1.1
 
 ### 1.0.0-SNAPSHOT
 
